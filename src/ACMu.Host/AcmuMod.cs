@@ -6,7 +6,7 @@ namespace ACMu.Host
     {
         public override void OnLoad()
         {
-            ModConsole.Log("ACMu loaded");
+            AcmuCoreBootstrap.Initialize();
         }
     }
 }
