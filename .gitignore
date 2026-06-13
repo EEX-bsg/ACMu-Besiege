@@ -1,0 +1,11 @@
+bin/
+obj/
+*.user
+Directory.Build.props.user
+.vs/
+docs/
+*.DotSettings
+
+# Build output (except mod manifest and resources)
+ACMu/*.dll
+ACMu/*.pdb

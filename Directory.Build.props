@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    ローカル設定: Directory.Build.props.user (gitignore対象) を作成し BesiegeDir を設定してください。
+    例:
+      <Project>
+        <PropertyGroup>
+          <BesiegeDir>D:/steam/steamapps/common/Besiege</BesiegeDir>
+        </PropertyGroup>
+      </Project>
+    または環境変数 BESIEGE_DIR を設定してください。
+  -->
+  <Import Project="Directory.Build.props.user" Condition="Exists('Directory.Build.props.user')" />
+  <PropertyGroup>
+    <BesiegeDir Condition="'$(BesiegeDir)' == '' and '$(BESIEGE_DIR)' != ''">$(BESIEGE_DIR)</BesiegeDir>
+  </PropertyGroup>
+</Project>
