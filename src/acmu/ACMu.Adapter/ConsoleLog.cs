@@ -11,26 +11,30 @@ namespace ACMu.Adapter
 
         public void Info(string message)
         {
-            try { Modding.ModConsole.Log("[ACMu] " + message); }
-            catch { }
+            string text = "[ACMu] " + message;
+            try { Modding.ModConsole.Log(text); } catch { }
+            Debug.Log(text);
         }
 
         public void Warn(string message)
         {
-            try { Modding.ModConsole.Log("[ACMu:WARN] " + message); }
-            catch { }
+            string text = "[ACMu:WARN] " + message;
+            try { Modding.ModConsole.Log(text); } catch { }
+            Debug.LogWarning(text);
         }
 
         public void Error(string message)
         {
-            try { Modding.ModConsole.Log("[ACMu:ERR] " + message); }
-            catch { }
+            string text = "[ACMu:ERR] " + message;
+            try { Modding.ModConsole.Log(text); } catch { }
+            Debug.LogError(text);
         }
 
         public void Error(string message, Exception ex)
         {
-            try { Modding.ModConsole.Log("[ACMu:ERR] " + message + "\n" + ex.Message); }
-            catch { }
+            string text = "[ACMu:ERR] " + message + ": " + ex.Message;
+            try { Modding.ModConsole.Log(text); } catch { }
+            Debug.LogError(text);
         }
 
         public void OnModLoad() { }

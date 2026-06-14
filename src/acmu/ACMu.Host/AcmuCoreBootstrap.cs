@@ -13,6 +13,18 @@ namespace ACMu.Host
     {
         internal static void Initialize()
         {
+            try
+            {
+                Boot();
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError("[ACMu] Bootstrap failed: " + ex.Message);
+            }
+        }
+
+        private static void Boot()
+        {
             var go = new GameObject(WellKnownNames.CoreObjectName);
             UnityEngine.Object.DontDestroyOnLoad(go);
 

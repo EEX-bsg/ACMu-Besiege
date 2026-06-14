@@ -44,7 +44,7 @@ namespace ACMu.Adapter
             foreach (Delegate d in e.GetInvocationList())
             {
                 try { ((Action<bool>)d)(started); }
-                catch (Exception ex) { Debug.LogError("[ACMu] SimulationToggled handler threw: " + ex); }
+                catch (Exception ex) { Debug.LogError("[ACMu] SimulationToggled handler threw: " + ex.Message); }
             }
         }
 
@@ -56,7 +56,7 @@ namespace ACMu.Adapter
             foreach (Delegate d in e.GetInvocationList())
             {
                 try { ((Action<IBlockAccessor>)d)(accessor); }
-                catch (Exception ex) { Debug.LogError("[ACMu] BlockInitialized handler threw: " + ex); }
+                catch (Exception ex) { Debug.LogError("[ACMu] BlockInitialized handler threw: " + ex.Message); }
             }
         }
 
@@ -68,7 +68,7 @@ namespace ACMu.Adapter
             foreach (Delegate d in e.GetInvocationList())
             {
                 try { ((Action<int>)d)(id); }
-                catch (Exception ex) { Debug.LogError("[ACMu] PlayerJoined handler threw: " + ex); }
+                catch (Exception ex) { Debug.LogError("[ACMu] PlayerJoined handler threw: " + ex.Message); }
             }
         }
 
@@ -80,7 +80,7 @@ namespace ACMu.Adapter
             foreach (Delegate d in e.GetInvocationList())
             {
                 try { ((Action<int>)d)(id); }
-                catch (Exception ex) { Debug.LogError("[ACMu] PlayerLeft handler threw: " + ex); }
+                catch (Exception ex) { Debug.LogError("[ACMu] PlayerLeft handler threw: " + ex.Message); }
             }
         }
 
@@ -91,7 +91,7 @@ namespace ACMu.Adapter
             foreach (Delegate d in e.GetInvocationList())
             {
                 try { ((Action)d)(); }
-                catch (Exception ex) { Debug.LogError("[ACMu] LevelLoaded handler threw: " + ex); }
+                catch (Exception ex) { Debug.LogError("[ACMu] LevelLoaded handler threw: " + ex.Message); }
             }
         }
 

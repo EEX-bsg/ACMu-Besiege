@@ -55,7 +55,7 @@ namespace ACMu.Adapter
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ACMu:ERR] Save failed for " + fileName + ": " + ex);
+                Debug.LogError("[ACMu:ERR] Save failed for " + fileName + ": " + ex.Message);
             }
         }
 
