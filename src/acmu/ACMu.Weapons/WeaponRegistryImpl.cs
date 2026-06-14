@@ -16,7 +16,7 @@ namespace ACMu.Weapons
                 throw new ArgumentException("WeaponFactory must not be null");
             if (WeaponHostRegistry.Contains(typeof(TModule)))
                 throw new InvalidOperationException(
-                    "[ACMu] WeaponRegistry: duplicate registration for " + typeof(TModule).Name);
+                    "[ACMu] WeaponRegistry: duplicate ModuleName: " + registration.ModuleName);
 
             WeaponHostRegistry.Register(typeof(TModule), registration);
             CustomModules.AddBlockModule<TModule, WeaponHostBehaviour<TModule>>(

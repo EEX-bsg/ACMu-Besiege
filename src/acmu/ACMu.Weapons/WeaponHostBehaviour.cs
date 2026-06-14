@@ -73,16 +73,14 @@ namespace ACMu.Weapons
             _block = _services.Blocks.FromGameObject(gameObject);
             if (_block == null)
             {
-                _services.Log.Error("[ACMu] WeaponHostBehaviour: failed to get IBlockAccessor for "
-                    + typeof(TModule).Name);
+                _services.Log.Error("[ACMu] WeaponHostBehaviour: failed to get IBlockAccessor");
                 return;
             }
 
             var reg = WeaponHostRegistry.Get(typeof(TModule));
             if (reg == null)
             {
-                _services.Log.Error("[ACMu] WeaponHostBehaviour: no registration for "
-                    + typeof(TModule).Name);
+                _services.Log.Error("[ACMu] WeaponHostBehaviour: no registration found");
                 return;
             }
 
