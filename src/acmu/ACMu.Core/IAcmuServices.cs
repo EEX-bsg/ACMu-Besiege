@@ -19,6 +19,10 @@ namespace ACMu.Core
         ILog Log { get; }
         IGameSessionInfo Session { get; }
         IGameEventSource GameEvents { get; }
+
+        /// <summary>ブロック GameObject から IBlockAccessor を生成するファクトリ。</summary>
+        IBlockAccessorFactory Blocks { get; }
+
         IConfigStore Config { get; }
         INetworkTransport Network { get; }
         IWorldFrame World { get; }

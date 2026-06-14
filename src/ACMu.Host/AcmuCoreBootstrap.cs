@@ -14,16 +14,18 @@ namespace ACMu.Host
             var log = go.AddComponent<ConsoleLog>();
             var session = go.AddComponent<GameSessionInfoAdapter>();
             var events = go.AddComponent<GameEventSourceAdapter>();
+            var blocks = go.AddComponent<BlockAccessorFactoryAdapter>();
             var config = go.AddComponent<ModIoConfigStore>();
 
             var services = go.AddComponent<AcmuServicesComponent>();
-            services.Initialize(log, session, events, config);
+            services.Initialize(log, session, events, blocks, config);
 
             var coordinator = go.AddComponent<LifecycleCoordinator>();
             coordinator.Initialize(events, session, log);
             coordinator.AddParticipant(log);
             coordinator.AddParticipant(session);
             coordinator.AddParticipant(events);
+            coordinator.AddParticipant(blocks);
             coordinator.AddParticipant(config);
 
             coordinator.SortAndBootstrap();
