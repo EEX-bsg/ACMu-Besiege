@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dotnet build -c Release
+dotnet msbuild src/acmu/acmu.csproj /p:Configuration=Release
 
 if [ -n "${BESIEGE_DIR:-}" ]; then
     DEST="$BESIEGE_DIR/Besiege_Data/Mods/ACMu"
