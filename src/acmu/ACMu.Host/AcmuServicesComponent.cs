@@ -42,6 +42,7 @@ namespace ACMu.Host
             IGameEventSource gameEvents,
             IBlockAccessorFactory blocks,
             IConfigStore config,
+            INetworkTransport network,
             IProjectileService projectiles,
             IWeaponRegistry weapons)
         {
@@ -50,7 +51,7 @@ namespace ACMu.Host
             _gameEvents = gameEvents;
             _blocks = blocks;
             _config = config;
-            _network = new NullNetworkTransport();
+            _network = network;
             _world = new NullWorldFrame();
             _projectiles = projectiles;
             _weapons = weapons;

@@ -51,6 +51,7 @@
     <Compile Include="ACMu.Core\**\*.cs" />
     <Compile Include="ACMu.PluginApi\**\*.cs" />
     <Compile Include="ACMu.Adapter\**\*.cs" />
+    <Compile Include="ACMu.Net\**\*.cs" />
     <Compile Include="ACMu.Host\**\*.cs" />
     <Compile Include="ACMu.Weapons\**\*.cs" />
     <Compile Include="ACMu.Compat\**\*.cs" />

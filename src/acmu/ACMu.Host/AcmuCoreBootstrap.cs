@@ -2,6 +2,7 @@ using System;
 using ACMu.Adapter;
 using ACMu.Compat.TestCannon;
 using ACMu.Core;
+using ACMu.Net;
 using ACMu.PluginApi;
 using ACMu.Weapons;
 using UnityEngine;
@@ -21,13 +22,16 @@ namespace ACMu.Host
             var blocks = go.AddComponent<BlockAccessorFactoryAdapter>();
             var config = go.AddComponent<ModIoConfigStore>();
 
+            var network = go.AddComponent<ModNetTransport>();
+            network.InitializeService(log, events, 1);
+
             var projectiles = go.AddComponent<ProjectileService>();
             projectiles.InitializeService(log);
 
             var registry = new WeaponRegistryImpl();
 
             var services = go.AddComponent<AcmuServicesComponent>();
-            services.Initialize(log, session, events, blocks, config, projectiles, registry);
+            services.Initialize(log, session, events, blocks, config, network, projectiles, registry);
 
             var coordinator = go.AddComponent<LifecycleCoordinator>();
             coordinator.Initialize(events, session, log);
@@ -36,6 +40,7 @@ namespace ACMu.Host
             coordinator.AddParticipant(events);
             coordinator.AddParticipant(blocks);
             coordinator.AddParticipant(config);
+            coordinator.AddParticipant(network);
             coordinator.AddParticipant(projectiles);
 
             coordinator.SortAndBootstrap();
