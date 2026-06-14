@@ -1,6 +1,6 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-14 (Mod起動修正後)
+最終更新: 2026-06-14 (M1.5 完了・M2 未着手)
 
 ---
 
@@ -39,6 +39,33 @@
 | `Null/NullWorldFrame.cs` | IWorldFrame Null実装 (M6で差替え) |
 | `Null/NullProjectileService.cs` | IProjectileService Null実装 (M2で差替え) |
 | `Null/NullWeaponRegistry.cs` | IWeaponRegistry Null実装 (M2で差替え) |
+
+### M1.5 ✅ — Mod 起動確立・M2 Core seam 追加 (タグなし / commit f7aadbb)
+
+M0 が残した設計ミスの修正 + M2 のための Core 拡張。git tag は打っていないがビルド確認済み。
+
+**Mod 起動修正**:
+| 変更 | 内容 |
+|---|---|
+| `src/acmu/Mod.cs` | `OnLoad()` で `AcmuCoreBootstrap.Initialize()` を呼ぶ(元は空) |
+| `src/acmu/ACMu.Host/AcmuMod.cs` | 削除。M0 が作った重複エントリーポイント。`Mod.cs` だけで十分 |
+| `src/acmu/acmu.csproj` | `<PlatformTarget>x86</PlatformTarget>` 追加(DynamicText.dll arch 警告を除去) |
+| `build.sh` | `dotnet msbuild` → VS MSBuild(vswhere 自動検出)に変更。dotnet は Unity Full v3.5 プロファイル非対応 |
+
+**M2 Core seam 追加** (凍結対象だが調査ドキュメント M2_INVESTIGATION.md §3 でユーザー承認済み):
+| ファイル | 変更 |
+|---|---|
+| `ACMu.Core/Game/IBlockAccessorFactory.cs` | 新規。`FromGameObject(GameObject)` → `IBlockAccessor` のファクトリ契約 |
+| `ACMu.Core/IAcmuServices.cs` | `IBlockAccessorFactory Blocks { get; }` プロパティを追加 |
+| `ACMu.Adapter/BlockAccessorFactoryAdapter.cs` | 新規。`Block.From(go).InternalObject` → `BlockAccessorAdapter` を `Dictionary` キャッシュつきで返す |
+| `ACMu.Host/AcmuServicesComponent.cs` | `_blocks` フィールド + `Blocks` プロパティ追加、`Initialize()` 引数に追加 |
+| `ACMu.Host/AcmuCoreBootstrap.cs` | `BlockAccessorFactoryAdapter` を AddComponent して配線 |
+
+**seam の存在理由(次セッションの AI が読む想定)**:
+Weapons 層の `WeaponHostBehaviour` は `IWeaponHost.Block`(= `IBlockAccessor`)を組み立てる必要がある。
+しかし `BlockBehaviour`(decompile 型)は Adapter 外で触れてはならない(依存規律 rule 2)。
+この seam により Weapons は `services.Blocks.FromGameObject(this.gameObject)` を呼ぶだけで済む。
+decompile 型の取り扱いは Adapter の `BlockAccessorFactoryAdapter` が完全に隠蔽する。
 
 ---
 
@@ -97,8 +124,8 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 6. `TestCannonWeapon.cs` — WeaponComponentBase継承, OnBeforeFireで弾速反映
 
 **Host配線変更** (`src/ACMu.Host/`):
-- `AcmuCoreBootstrap.cs`: ProjectileService と WeaponRegistryImpl を AddComponent、NullWeaponRegistry を差替え
-- `AcmuServicesComponent.cs`: _projectiles と _weapons の初期化をBootstrapに委譲へ変更
+- `AcmuCoreBootstrap.cs`: `ProjectileService` と `WeaponRegistryImpl` を AddComponent、`NullProjectileService` / `NullWeaponRegistry` を差替え ← **これだけ残り。Blocks 配線は M1.5 で完了済み**
+- `AcmuServicesComponent.cs`: 変更不要(M1.5 で `Blocks` 追加済み。`_projectiles` / `_weapons` は Bootstrap 経由で渡す)
 
 **M2着手前に読むべき契約**:
 - `src/acmu/ACMu.Core/Weapons/WeaponComponentBase.cs`
