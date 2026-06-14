@@ -10,16 +10,30 @@
 
     <Modules>
         <AcmuTestCannon modid="e2650bb4-7195-42a8-93c4-bdab66f5b571">
-            <FireKey>acmu-fire</FireKey>
-            <SpeedSlider>acmu-speed</SpeedSlider>
+            <FireKey key="acmu-fire" />
+            <SpeedSlider key="acmu-speed" />
         </AcmuTestCannon>
     </Modules>
 
+
+    <Mesh name="TestCannon">
+        <Position x="0.0" y="0.0" z="0.05" />
+        <Rotation x="0.0" y="90.0" z="0.0" />
+        <Scale x="2.0" y="2.0" z="2.0" />
+    </Mesh>
+    <Texture name="metal" />
+
+    <Icon>
+        <Position x="0.2" y="0.2" z="0.0" />
+        <Rotation x="60.0" y="30.0" z="30.0" />
+        <Scale x="0.25" y="0.25" z="0.25" />
+    </Icon>
+
     <Colliders>
         <BoxCollider>
-            <Position x="0.0" y="0.0" z="0.0" />
+            <Position x="0.0" y="0.0" z="0.22" />
             <Rotation x="0.0" y="0.0" z="0.0" />
-            <Scale x="0.9" y="0.9" z="0.9" />
+            <Scale x="0.33" y="0.33" z="0.33" />
         </BoxCollider>
     </Colliders>
 

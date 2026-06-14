@@ -6,7 +6,9 @@ namespace ACMu.Weapons
 {
     public class WeaponRegistryImpl : IWeaponRegistry
     {
-        public void Register<TModule>(WeaponRegistration registration) where TModule : BlockModule, new()
+        public void Register<TModule, TBehaviour>(WeaponRegistration registration)
+            where TModule : BlockModule, new()
+            where TBehaviour : BlockModuleBehaviour<TModule>
         {
             if (registration == null)
                 throw new ArgumentNullException("registration");
@@ -19,8 +21,7 @@ namespace ACMu.Weapons
                     "[ACMu] WeaponRegistry: duplicate ModuleName: " + registration.ModuleName);
 
             WeaponHostRegistry.Register(typeof(TModule), registration);
-            CustomModules.AddBlockModule<TModule, WeaponHostBehaviour<TModule>>(
-                registration.ModuleName, registration.MultiplayerCompatible);
+            CustomModules.AddBlockModule<TModule, TBehaviour>(registration.ModuleName, false);
         }
     }
 }

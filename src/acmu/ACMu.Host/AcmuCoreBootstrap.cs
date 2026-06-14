@@ -65,12 +65,13 @@ namespace ACMu.Host
 
             try
             {
-                registry.Register<TestCannonModule>(new WeaponRegistration
+                registry.Register<TestCannonModule, TestCannonHostBehaviour>(new WeaponRegistration
                 {
                     ModuleName = "AcmuTestCannon",
                     MultiplayerCompatible = false,
                     WeaponFactory = () => new TestCannonWeapon()
                 });
+                services.Log.Info("[ACMu] Bootstrap: Register TestCannon OK"); // DEBUG
             }
             catch (Exception ex)
             {

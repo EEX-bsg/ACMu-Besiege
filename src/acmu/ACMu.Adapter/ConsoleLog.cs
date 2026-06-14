@@ -29,7 +29,7 @@ namespace ACMu.Adapter
 
         public void Error(string message, Exception ex)
         {
-            try { Modding.ModConsole.Log("[ACMu:ERR] " + message + "\n" + ex.ToString()); }
+            try { Modding.ModConsole.Log("[ACMu:ERR] " + message + "\n" + ex.Message); }
             catch { }
         }
 

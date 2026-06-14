@@ -49,20 +49,25 @@ namespace ACMu.Weapons
 
         public override void SafeAwake()
         {
+            Debug.Log("[ACMu DBG] WHB.SafeAwake: entry"); // DEBUG
             base.SafeAwake();
+            Debug.Log("[ACMu DBG] WHB.SafeAwake: after base"); // DEBUG
             var core = GameObject.Find(WellKnownNames.CoreObjectName);
+            Debug.Log("[ACMu DBG] WHB.SafeAwake: FindCore=" + (core != null ? "found" : "NULL")); // DEBUG
             if (core == null)
             {
                 Debug.LogError("[ACMu] WeaponHostBehaviour: ACMUcore not found");
                 return;
             }
             var pluginHost = core.GetComponent<IAcmuPluginHost>();
+            Debug.Log("[ACMu DBG] WHB.SafeAwake: pluginHost=" + (pluginHost != null ? "found" : "NULL")); // DEBUG
             if (pluginHost == null)
             {
                 Debug.LogError("[ACMu] WeaponHostBehaviour: IAcmuPluginHost not found");
                 return;
             }
             _services = pluginHost.Services;
+            Debug.Log("[ACMu DBG] WHB.SafeAwake: complete services=" + (_services != null ? "ok" : "null")); // DEBUG
         }
 
         public override void OnSimulateStart()
@@ -94,7 +99,7 @@ namespace ACMu.Weapons
             }
             catch (Exception ex)
             {
-                _services.Log.Error("[ACMu] WeaponHostBehaviour.AttachTo: " + ex);
+                _services.Log.Error("[ACMu] WeaponHostBehaviour.AttachTo: " + ex.Message);
                 _weapon = null;
                 return;
             }
@@ -105,7 +110,7 @@ namespace ACMu.Weapons
             try { _weapon.NotifySimulationStart(); }
             catch (Exception ex)
             {
-                _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifySimulationStart: " + ex);
+                _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifySimulationStart: " + ex.Message);
             }
         }
 
@@ -117,7 +122,7 @@ namespace ACMu.Weapons
             catch (Exception ex)
             {
                 if (_services != null)
-                    _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifyUpdate: " + ex);
+                    _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifyUpdate: " + ex.Message);
             }
         }
 
@@ -130,7 +135,7 @@ namespace ACMu.Weapons
                 catch (Exception ex)
                 {
                     if (_services != null)
-                        _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifySimulationStop: " + ex);
+                        _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifySimulationStop: " + ex.Message);
                 }
             }
 
