@@ -1,6 +1,5 @@
-using System;
 using Modding;
-using UnityEngine;
+using ACMu.Host;
 
 namespace ACMu
 {
@@ -9,6 +8,7 @@ namespace ACMu
 	{
 		public override void OnLoad()
 		{
+			AcmuCoreBootstrap.Initialize();
 		}
 	}
 }

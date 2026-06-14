@@ -1,19 +1,22 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-14 (M1完了時点)
+最終更新: 2026-06-14 (Mod起動修正後)
 
 ---
 
 ## 完了済みマイルストーン
 
 ### M0 ✅ (タグ: M0)
-- `ACMu.csproj` (SDK-style, net35, LangVersion=6, PlatformTarget=x86)
 - `Directory.Build.props` + `Directory.Build.props.user` (gitignore)
 - `.gitignore` (bin/, obj/, docs/, ACMu/*.dll 等)
 - `build.sh`
-- `src/ACMu.Host/AcmuMod.cs` (空Mod EntryPoint)
+- `ACMu/Mod.xml` (Besiegeマニフェスト — `mod.json`ではなくXML形式)
 
 ビルド: 警告0エラー0確認済み
+
+**注**: M0当初に作成したSDK-styleの `ACMu.csproj` (ルート) と `src/ACMu.Host/AcmuMod.cs` は
+誤った設計であった。真のプロジェクトファイルは `src/acmu/acmu.csproj` (旧VS形式)。
+エントリーポイントは `src/acmu/Mod.cs` (`Mod : ModEntryPoint`)。
 
 ### M1 ✅ (タグ: M1)
 
@@ -48,11 +51,13 @@ CS0234エラーになる。**完全修飾 `Modding.ModIO.ExistsFile()` を使う
 ### BlockBehaviour.Sliders / Toggles / Keys の型
 実際の戻り値は `IEnumerable<T>` であり `List<T>` ではない。インデックスアクセス不可。foreach必須。
 
-### dotnet CLI パス
-`dotnet` コマンドはPATHにない。フルパス使用:
+### ビルドツール: VS MSBuildを使うこと
+`dotnet msbuild` は `TargetFrameworkProfile=Unity Full v3.5` (非標準プロファイル) を解決できず
+**MSB3644 エラーで失敗する**。代わりに Visual Studio の MSBuild を使う:
+```powershell
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" src/acmu/acmu.csproj /p:Configuration=Release /nologo /v:minimal
 ```
-& "C:\Program Files\dotnet\dotnet.exe" build ACMu.csproj -c Release
-```
+`build.sh` は vswhere 経由で自動検出する。PowerShell での手動ビルドは上記コマンド。
 
 ### git コミット (PowerShell)
 here-string構文 `@'...'@` を使う (bash heredocは使えない):
@@ -62,9 +67,9 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 '@
 ```
 
-### 旧ACMファイルの除外
-`src/acmu/` 以下の旧ファイル (`Mod.cs`, `acmu.csproj`, `ACMu.sln` 等) は
-csproj の `<Compile Remove>` で除外済み。コミット対象に含めないこと。
+### Mod.cs がエントリーポイント / AcmuMod.cs は不要
+`src/acmu/Mod.cs` が唯一のエントリーポイント。Besiege はアセンブリ内の全 `ModEntryPoint` 実装を呼ぶ。
+`AcmuMod.cs`（二重エントリーポイント）は削除済み。`Mod.cs` が `AcmuCoreBootstrap.Initialize()` を呼ぶ。
 
 ---
 
