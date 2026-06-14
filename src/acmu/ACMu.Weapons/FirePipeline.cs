@@ -59,12 +59,12 @@ namespace ACMu.Weapons
 
             FireDecision decision = FireDecision.Proceed;
             try { decision = _weapon.NotifyValidateFire(context); }
-            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.ValidateFire: " + ex); }
+            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.ValidateFire: " + ex.Message); }
 
             if (decision == FireDecision.Suppress) return;
 
             try { _weapon.NotifyBeforeFire(context); }
-            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.BeforeFire: " + ex); }
+            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.BeforeFire: " + ex.Message); }
 
             if (context.DelaySeconds > 0f)
                 _coroutineRunner.StartCoroutine(DelayedFire(context));
@@ -100,7 +100,7 @@ namespace ACMu.Weapons
             }
 
             try { _weapon.NotifyAfterFire(context, handle); }
-            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.AfterFire: " + ex); }
+            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.AfterFire: " + ex.Message); }
         }
 
         private void OnImpactOccurred(ProjectileHandle handle, Collision collision)
@@ -124,10 +124,10 @@ namespace ACMu.Weapons
             };
 
             try { _weapon.NotifyImpact(impact); }
-            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.NotifyImpact: " + ex); }
+            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.NotifyImpact: " + ex.Message); }
 
             try { _weapon.NotifyExplosion(impact); }
-            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.NotifyExplosion: " + ex); }
+            catch (Exception ex) { _host.Log.Error("[ACMu] FirePipeline.NotifyExplosion: " + ex.Message); }
         }
 
         private void OnDespawned(ProjectileHandle handle, DespawnReason reason)

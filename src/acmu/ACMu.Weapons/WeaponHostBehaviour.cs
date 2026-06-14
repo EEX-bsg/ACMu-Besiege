@@ -39,8 +39,8 @@ namespace ACMu.Weapons
             get { return _services != null && _services.Session.IsSimulating; }
         }
 
-        public Vector3 MuzzlePosition { get { return transform.position; } }
-        public Quaternion MuzzleRotation { get { return transform.rotation; } }
+        public virtual Vector3 MuzzlePosition { get { return transform.position; } }
+        public virtual Quaternion MuzzleRotation { get { return transform.rotation; } }
 
         public void RequestFire()
         {
@@ -49,25 +49,20 @@ namespace ACMu.Weapons
 
         public override void SafeAwake()
         {
-            Debug.Log("[ACMu DBG] WHB.SafeAwake: entry"); // DEBUG
             base.SafeAwake();
-            Debug.Log("[ACMu DBG] WHB.SafeAwake: after base"); // DEBUG
             var core = GameObject.Find(WellKnownNames.CoreObjectName);
-            Debug.Log("[ACMu DBG] WHB.SafeAwake: FindCore=" + (core != null ? "found" : "NULL")); // DEBUG
             if (core == null)
             {
                 Debug.LogError("[ACMu] WeaponHostBehaviour: ACMUcore not found");
                 return;
             }
             var pluginHost = core.GetComponent<IAcmuPluginHost>();
-            Debug.Log("[ACMu DBG] WHB.SafeAwake: pluginHost=" + (pluginHost != null ? "found" : "NULL")); // DEBUG
             if (pluginHost == null)
             {
                 Debug.LogError("[ACMu] WeaponHostBehaviour: IAcmuPluginHost not found");
                 return;
             }
             _services = pluginHost.Services;
-            Debug.Log("[ACMu DBG] WHB.SafeAwake: complete services=" + (_services != null ? "ok" : "null")); // DEBUG
         }
 
         public override void OnSimulateStart()

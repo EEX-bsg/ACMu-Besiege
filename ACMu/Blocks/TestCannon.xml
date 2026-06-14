@@ -12,6 +12,14 @@
         <AcmuTestCannon modid="e2650bb4-7195-42a8-93c4-bdab66f5b571">
             <FireKey key="acmu-fire" />
             <SpeedSlider key="acmu-speed" />
+            <!-- 発射原点オフセット(ブロックローカル座標, m) -->
+            <MuzzleOffsetX>0</MuzzleOffsetX>
+            <MuzzleOffsetY>0</MuzzleOffsetY>
+            <MuzzleOffsetZ>5</MuzzleOffsetZ>
+            <!-- 発射方向(ブロックローカル座標ベクトル。メッシュ回転Y=90°なら砲身は+X方向の可能性大) -->
+            <MuzzleForwardX>1</MuzzleForwardX>
+            <MuzzleForwardY>0</MuzzleForwardY>
+            <MuzzleForwardZ>0</MuzzleForwardZ>
         </AcmuTestCannon>
     </Modules>
 

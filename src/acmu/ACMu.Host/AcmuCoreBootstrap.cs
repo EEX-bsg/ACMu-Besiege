@@ -60,7 +60,7 @@ namespace ACMu.Host
             }
             catch (Exception ex)
             {
-                services.Log.Error("[ACMu] Bootstrap: RegisterProjectile failed: " + ex);
+                services.Log.Error("[ACMu] Bootstrap: RegisterProjectile failed: " + ex.Message);
             }
 
             try
@@ -71,11 +71,11 @@ namespace ACMu.Host
                     MultiplayerCompatible = false,
                     WeaponFactory = () => new TestCannonWeapon()
                 });
-                services.Log.Info("[ACMu] Bootstrap: Register TestCannon OK"); // DEBUG
+                services.Log.Info("[ACMu] TestCannon registered");
             }
             catch (Exception ex)
             {
-                services.Log.Error("[ACMu] Bootstrap: Register TestCannon failed: " + ex);
+                services.Log.Error("[ACMu] Bootstrap: Register TestCannon failed: " + ex.Message);
             }
         }
     }
