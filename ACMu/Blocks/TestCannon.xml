@@ -1,0 +1,29 @@
+<Block>
+    <ID>1</ID>
+    <Name>Test Cannon (ACMu)</Name>
+    <Mass>1.0</Mass>
+
+    <ModuleMapperTypes>
+        <Key displayName="Fire" key="acmu-fire" default="C" />
+        <Slider displayName="Muzzle Velocity" key="acmu-speed" min="10.0" max="500.0" default="100.0" />
+    </ModuleMapperTypes>
+
+    <Modules>
+        <AcmuTestCannon modid="e2650bb4-7195-42a8-93c4-bdab66f5b571">
+            <FireKey>acmu-fire</FireKey>
+            <SpeedSlider>acmu-speed</SpeedSlider>
+        </AcmuTestCannon>
+    </Modules>
+
+    <Colliders>
+        <BoxCollider>
+            <Position x="0.0" y="0.0" z="0.0" />
+            <Rotation x="0.0" y="0.0" z="0.0" />
+            <Scale x="0.9" y="0.9" z="0.9" />
+        </BoxCollider>
+    </Colliders>
+
+    <BasePoint hasAddingPoint="true">
+        <Stickiness enabled="true" radius="0.6" />
+    </BasePoint>
+</Block>

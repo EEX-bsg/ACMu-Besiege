@@ -1,4 +1,4 @@
-# CLAUDE.md — ACMu 開発ルール(Claude Code 常駐コンテキスト)
+# AGENTS.md — ACMu 開発ルール(Codex 常駐コンテキスト)
 
 ACMu は Besiege の Mod「ACM」の権利クリーンな非公式フォーク。武装プラグインAPIと
 ボーダーレスワールド(拡張EX)がコア価値。あなた(Sonnet)は実装担当。設計判断はしない。

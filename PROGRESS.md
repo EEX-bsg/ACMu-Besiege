@@ -1,6 +1,6 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-14 (M1.5 完了・M2 未着手)
+最終更新: 2026-06-14 (M2 完了)
 
 ---
 
@@ -98,50 +98,48 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 `src/acmu/Mod.cs` が唯一のエントリーポイント。Besiege はアセンブリ内の全 `ModEntryPoint` 実装を呼ぶ。
 `AcmuMod.cs`（二重エントリーポイント）は削除済み。`Mod.cs` が `AcmuCoreBootstrap.Initialize()` を呼ぶ。
 
+### M2 ✅ — 武装の縦切り1本 (警告0エラー0確認済み)
+
+**ACMu.Weapons 層** (新規):
+| ファイル | 実装内容 |
+|---|---|
+| `ProjectileBody.cs` | MonoBehaviour。OnCollisionEnterでProjectileService.HandleImpactへ通知。_hit フラグで二重着弾防止 |
+| `ProjectileService.cs` | IProjectileService + MonoBehaviour + ILifecycleParticipant(InitOrder=300)。Queue<GameObject>プール、_epoch でライフタイムコルーチン無効化、StopAllCoroutinesでシミュ停止時クリーン |
+| `WeaponHostRegistry.cs` | internal static Dictionary<Type, WeaponRegistration>。WeaponRegistryImpl と WeaponHostBehaviour を繋ぐ内部ハブ |
+| `WeaponHostBehaviour.cs` | BlockModuleBehaviour<TModule> : IWeaponHost。SafeAwake でseam解決、OnSimulateStart でアクセサ確定+武装生成、SimulateUpdateAlways で権威チェック後 NotifyUpdate |
+| `FirePipeline.cs` | internal sealed。Time.time ベースのクールダウン、DelayedFire コルーチン、ImpactOccurred/Despawned を内部で購読・Dispose でunsubscribe |
+| `WeaponRegistryImpl.cs` | IWeaponRegistry。AddBlockModule<TModule, WeaponHostBehaviour<TModule>> + WeaponHostRegistry 登録。二重登録は例外 |
+
+**ACMu.Compat/TestCannon 層** (新規):
+| ファイル | 実装内容 |
+|---|---|
+| `TestCannonModule.cs` | [Serializable] BlockModule。FireKey / SpeedSlider の MKeyReference / MSliderReference を定義 |
+| `TestCannonWeapon.cs` | WeaponComponentBase。OnAttached でBaseSpec設定、OnUpdate でIsKeyHeldチェック、OnBeforeFire でスライダー値をShotに反映 |
+
+**Host 配線変更**:
+| ファイル | 変更 |
+|---|---|
+| `AcmuCoreBootstrap.cs` | ProjectileService(AddComponent+InitializeService) + WeaponRegistryImpl(new) を追加。RegisterTestCannon でSphere prefab作成+登録 |
+| `AcmuServicesComponent.Initialize()` | シグネチャに IProjectileService/IWeaponRegistry を追加。Null実装を置換 |
+| `acmu.csproj` | ACMu.Weapons / ACMu.Compat の Compile Include を追加 |
+
+**データ**:
+| ファイル | 内容 |
+|---|---|
+| `ACMu/Blocks/TestCannon.xml` | ブロック定義。ModuleMapperTypes (Key/Slider) + Modules (AcmuTestCannon) + Collider + BasePoint |
+| `ACMu/Mod.xml` | `<Block path="Blocks/TestCannon.xml" />` 追加 |
+
+**設計上の判断**:
+- `WeaponHostBehaviour<TModule>` は Generic MonoBehaviour。Unity 5.4 で動作するのは型が具体確定済みの場合のみ(BCMがAddBlockModule内部で解決)
+- 発射キー監視は `TestCannonWeapon.OnUpdate` に配置。Generic Host は TModule の形状を知らないため、Key名定数を同層のConst経由で渡す
+- `ProjectileService.ImpactOccurred` は `internal` event。FirePipeline(同層)のみ購読できる。IProjectileService 公開面は汚染しない
+- Sphere prefab は `CreatePrimitive` でランタイム生成。メッシュアセット不要。SphereCollider が衝突検知も担う
+
 ---
 
-## 次のタスク: M2 (未着手 / 着手前調査は完了)
+## 次のタスク: M3 (未着手)
 
-> **必読**: M2 着手前の Besiege 実API整合性調査を `M2_INVESTIGATION.md` に完了済み。
-> Core 改訂は1点のみ(`IBlockAccessorFactory` 追加 + `IAcmuServices.Blocks` プロパティ)。
-> PluginApi 変更不要。武装登録設計(`CustomModules.AddBlockModule` / `BlockModuleBehaviour<T>`)は
-> 実在し実装可能(前回「契約変更必要」報告は誤りだった。リフレクションが UnityEngine 依存型を脱落させていた)。
-> DLL 構造調査は **Mono.Cecil** を使うこと(通常リフレクションは MonoBehaviour 派生型を取りこぼす)。
-> 実装手順・decompile型回避パターン・ライフサイクル対応表は `M2_INVESTIGATION.md` §3〜§5 に記載。
-
-### M2: 武装の縦切り1本
-
-**目的**: TestCannon でシングルプレイ発射→着弾→弾消滅の1サイクル完走。
-
-**実装ファイル** (`src/ACMu.Weapons/`):
-1. `ProjectileService.cs` — ローカルプール実装 (Queue<GameObject>), ハンドル連番, コルーチン寿命, ProjectileBody
-2. `WeaponHostBehaviour.cs` — `BlockModuleBehaviour<TModule>` 継承, IWeaponHost, WeaponComponentBase 管理
-3. `FirePipeline.cs` — RequestFire → クールダウン → NotifyBeforeFire → Spawn → コルーチン遅延 → NotifyAfterFire
-4. `WeaponRegistryImpl.cs` — CustomModules.AddBlockModule<TModule, WeaponHostBehaviour<TModule>> 呼び出し
-
-**実装ファイル** (`src/ACMu.Compat/TestCannon/`):
-5. `TestCannonModule.cs` — BlockModule([XmlRoot="AcmuTestCannon"]), スライダー+キー定義
-6. `TestCannonWeapon.cs` — WeaponComponentBase継承, OnBeforeFireで弾速反映
-
-**Host配線変更** (`src/ACMu.Host/`):
-- `AcmuCoreBootstrap.cs`: `ProjectileService` と `WeaponRegistryImpl` を AddComponent、`NullProjectileService` / `NullWeaponRegistry` を差替え ← **これだけ残り。Blocks 配線は M1.5 で完了済み**
-- `AcmuServicesComponent.cs`: 変更不要(M1.5 で `Blocks` 追加済み。`_projectiles` / `_weapons` は Bootstrap 経由で渡す)
-
-**M2着手前に読むべき契約**:
-- `src/acmu/ACMu.Core/Weapons/WeaponComponentBase.cs`
-- `src/acmu/ACMu.Core/Weapons/IWeaponHost.cs`
-- `src/acmu/ACMu.Core/Weapons/ProjectileHandle.cs`
-- `src/acmu/ACMu.Core/Weapons/ProjectileSpawnRequest.cs`
-- `src/acmu/ACMu.Core/Weapons/FireContext.cs`
-- `src/acmu/ACMu.Core/Weapons/WeaponSpec.cs`
-- `src/acmu/ACMu.PluginApi/WeaponRegistration.cs`
-
-**M2注意点**:
-- `WeaponHostBehaviour<TModule>` は Generic MonoBehaviour で Unity 5.4 / .NET 3.5 では
-  `AddComponent<WeaponHostBehaviour<TModule>>()` は使えない可能性がある。
-  `CustomModules.AddBlockModule` の内部で型引数が確定するため、ここでジェネリクスが解決される。
-- コルーチン: `yield return new WaitForSeconds(delay)` のみ可。IEnumerator戻り値のメソッドで定義。
-- ProjectileBody (OnCollisionEnter) はコンポーネントとして弾に attach。MonoBehaviour要。
+> M2 完了。次は INetworkTransport 実装(M3)。M2 の実機確認項目を先に人間が検証すること。
 
 ---
 

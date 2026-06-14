@@ -51,6 +51,8 @@
     <Compile Include="ACMu.PluginApi\**\*.cs" />
     <Compile Include="ACMu.Adapter\**\*.cs" />
     <Compile Include="ACMu.Host\**\*.cs" />
+    <Compile Include="ACMu.Weapons\**\*.cs" />
+    <Compile Include="ACMu.Compat\**\*.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

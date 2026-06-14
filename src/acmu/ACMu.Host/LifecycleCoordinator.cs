@@ -30,11 +30,12 @@ namespace ACMu.Host
         internal void SortAndBootstrap()
         {
             _participants.Sort((a, b) => a.InitOrder.CompareTo(b.InitOrder));
-            foreach (ILifecycleParticipant p in _participants)
+            for (int i = 0; i < _participants.Count; i++)
             {
-                try { p.OnModLoad(); }
-                catch (Exception ex) { _log.Error("OnModLoad failed for " + p.GetType().Name, ex); }
+                try { _participants[i].OnModLoad(); }
+                catch (Exception ex) { _log.Error("OnModLoad failed (participant index " + i + ")", ex); }
             }
+            _log.Info("ACMu loaded (" + _participants.Count + " participants)"); // DEBUG
         }
 
         private void OnSimulationToggled(bool isSimulating)
@@ -42,18 +43,21 @@ namespace ACMu.Host
             bool isMP = _session.IsMultiplayer;
             if (isSimulating)
             {
-                foreach (ILifecycleParticipant p in _participants)
+                string mode = isMP ? (_session.IsHost ? "MP/Host" : "MP/Client") : "SP"; // DEBUG
+                _log.Info("Simulation started [" + mode + "]"); // DEBUG
+                for (int i = 0; i < _participants.Count; i++)
                 {
-                    try { p.OnSimulationStart(isMP); }
-                    catch (Exception ex) { _log.Error("OnSimulationStart failed for " + p.GetType().Name, ex); }
+                    try { _participants[i].OnSimulationStart(isMP); }
+                    catch (Exception ex) { _log.Error("OnSimulationStart failed (participant index " + i + ")", ex); }
                 }
             }
             else
             {
+                _log.Info("Simulation stopped"); // DEBUG
                 for (int i = _participants.Count - 1; i >= 0; i--)
                 {
                     try { _participants[i].OnSimulationStop(); }
-                    catch (Exception ex) { _log.Error("OnSimulationStop failed for " + _participants[i].GetType().Name, ex); }
+                    catch (Exception ex) { _log.Error("OnSimulationStop failed (participant index " + i + ")", ex); }
                 }
             }
         }

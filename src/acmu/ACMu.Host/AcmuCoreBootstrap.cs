@@ -1,5 +1,9 @@
+using System;
 using ACMu.Adapter;
+using ACMu.Compat.TestCannon;
 using ACMu.Core;
+using ACMu.PluginApi;
+using ACMu.Weapons;
 using UnityEngine;
 
 namespace ACMu.Host
@@ -9,7 +13,7 @@ namespace ACMu.Host
         internal static void Initialize()
         {
             var go = new GameObject(WellKnownNames.CoreObjectName);
-            Object.DontDestroyOnLoad(go);
+            UnityEngine.Object.DontDestroyOnLoad(go);
 
             var log = go.AddComponent<ConsoleLog>();
             var session = go.AddComponent<GameSessionInfoAdapter>();
@@ -17,8 +21,13 @@ namespace ACMu.Host
             var blocks = go.AddComponent<BlockAccessorFactoryAdapter>();
             var config = go.AddComponent<ModIoConfigStore>();
 
+            var projectiles = go.AddComponent<ProjectileService>();
+            projectiles.InitializeService(log);
+
+            var registry = new WeaponRegistryImpl();
+
             var services = go.AddComponent<AcmuServicesComponent>();
-            services.Initialize(log, session, events, blocks, config);
+            services.Initialize(log, session, events, blocks, config, projectiles, registry);
 
             var coordinator = go.AddComponent<LifecycleCoordinator>();
             coordinator.Initialize(events, session, log);
@@ -27,8 +36,46 @@ namespace ACMu.Host
             coordinator.AddParticipant(events);
             coordinator.AddParticipant(blocks);
             coordinator.AddParticipant(config);
+            coordinator.AddParticipant(projectiles);
 
             coordinator.SortAndBootstrap();
+
+            RegisterTestCannon(services, registry);
+        }
+
+        private static void RegisterTestCannon(IAcmuServices services, IWeaponRegistry registry)
+        {
+            // Build a sphere prefab at runtime (Cube流用 / Sphere) for M2 testing
+            var spherePrefab = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            spherePrefab.transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
+            spherePrefab.SetActive(false);
+            UnityEngine.Object.DontDestroyOnLoad(spherePrefab);
+            var rb = spherePrefab.AddComponent<Rigidbody>();
+            rb.mass = 0.1f;
+
+            try
+            {
+                services.Projectiles.RegisterProjectile(
+                    TestCannonWeapon.ProjectileKey, spherePrefab, 5);
+            }
+            catch (Exception ex)
+            {
+                services.Log.Error("[ACMu] Bootstrap: RegisterProjectile failed: " + ex);
+            }
+
+            try
+            {
+                registry.Register<TestCannonModule>(new WeaponRegistration
+                {
+                    ModuleName = "AcmuTestCannon",
+                    MultiplayerCompatible = false,
+                    WeaponFactory = () => new TestCannonWeapon()
+                });
+            }
+            catch (Exception ex)
+            {
+                services.Log.Error("[ACMu] Bootstrap: Register TestCannon failed: " + ex);
+            }
         }
     }
 }

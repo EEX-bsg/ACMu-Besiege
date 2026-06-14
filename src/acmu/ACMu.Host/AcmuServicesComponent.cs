@@ -41,7 +41,9 @@ namespace ACMu.Host
             IGameSessionInfo session,
             IGameEventSource gameEvents,
             IBlockAccessorFactory blocks,
-            IConfigStore config)
+            IConfigStore config,
+            IProjectileService projectiles,
+            IWeaponRegistry weapons)
         {
             _log = log;
             _session = session;
@@ -50,8 +52,8 @@ namespace ACMu.Host
             _config = config;
             _network = new NullNetworkTransport();
             _world = new NullWorldFrame();
-            _projectiles = new NullProjectileService();
-            _weapons = new NullWeaponRegistry();
+            _projectiles = projectiles;
+            _weapons = weapons;
         }
     }
 }
