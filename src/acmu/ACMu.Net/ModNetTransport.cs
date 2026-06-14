@@ -14,7 +14,6 @@ namespace ACMu.Net
     {
         private const int MaxPayloadBytes = 8 * 1024;
         private const byte HelloChannel = 0;
-        private const byte EchoChannel = 1; // M3テスト用 後で削除
 
         private ILog _log;
         private IGameEventSource _events;
@@ -41,6 +40,7 @@ namespace ACMu.Net
         public void OnModLoad()
         {
             _msgType = ModNetworking.CreateMessageType(new[] { DataType.ByteArray });
+            _log.Info("Net init msgTypeID=" + _msgType.ID);
             ModNetworking.MessageReceived += OnRawMessageReceived;
             _events.PlayerJoined += OnPlayerJoined;
             _events.PlayerLeft  += OnPlayerLeft;
@@ -56,7 +56,13 @@ namespace ACMu.Net
             ModNetworking.MessageReceived -= OnRawMessageReceived;
         }
 
-        public void OnSimulationStart(bool isMultiplayer) { }
+        public void OnSimulationStart(bool isMultiplayer)
+        {
+            _log.Info("SimStart isMP=" + isMultiplayer + " IsReady=" + IsReady);
+            if (!isMultiplayer) return;
+            BroadcastHello();
+        }
+
         public void OnSimulationStop() { }
 
         public byte AllocateChannel(string ownerName)
@@ -130,7 +136,8 @@ namespace ACMu.Net
         private void OnRawMessageReceived(Message message)
         {
             if (message == null || message.Type == null) return;
-            if (message.Type.ID != _msgType.ID) return;
+            if (_msgType == null || message.Type.ID != _msgType.ID) return;
+            if (message.Sender == null) return;
 
             byte[] framed = message.GetData(0) as byte[];
             if (framed == null || framed.Length < 1) return;
@@ -143,7 +150,6 @@ namespace ACMu.Net
             int senderId = (int)message.Sender.NetworkId;
 
             if (channelId == HelloChannel) { HandleHello(senderId, payload); return; }
-            if (channelId == EchoChannel)  { HandleEcho(senderId, payload); return; }
 
             List<NetMessageHandler> handlers;
             if (!_handlers.TryGetValue(channelId, out handlers)) return;
@@ -160,6 +166,7 @@ namespace ACMu.Net
 
         private void OnPlayerJoined(int playerId)
         {
+            _log.Info("PlayerJoined peer=" + playerId + " IsReady=" + IsReady);
             var local = Player.GetLocalPlayer();
             if (local != null && (int)local.NetworkId == playerId) return;
 
@@ -167,7 +174,6 @@ namespace ACMu.Net
             if (e != null) e(playerId);
 
             SendHello(playerId);
-            SendEchoPing(playerId); // M3テスト用 後で削除
         }
 
         private void OnPlayerLeft(int playerId)
@@ -180,6 +186,13 @@ namespace ACMu.Net
         }
 
         // ---- チャネル0: バージョンhello ----
+
+        private void BroadcastHello()
+        {
+            var w = new PacketWriterImpl();
+            w.WriteInt32(_apiVersion);
+            Send(HelloChannel, w.ToArray(), NetTarget.Others, NetDelivery.Reliable);
+        }
 
         private void SendHello(int peerId)
         {
@@ -202,40 +215,6 @@ namespace ACMu.Net
             catch (Exception ex)
             {
                 _log.Error("[ACMu] Hello parse error from peer=" + senderId + ": " + ex.Message);
-            }
-        }
-
-        // ---- チャネル1: エコーテスト (M3テスト用 後で削除) ----
-
-        private void SendEchoPing(int peerId)
-        {
-            if (!ModNetworking.IsNetworkingReady) return;
-            var w = new PacketWriterImpl();
-            w.WriteByte(0); // isResponse=false
-            w.WriteString("ACMU_ECHO_PING");
-            SendToPlayer(EchoChannel, w.ToArray(), peerId, NetDelivery.Reliable);
-        }
-
-        private void HandleEcho(int senderId, byte[] payload)
-        {
-            try
-            {
-                var r = new PacketReaderImpl(payload);
-                byte isResponse = r.ReadByte();
-                string text = r.ReadString();
-                _log.Info("[ACMu] Echo ch1 from=" + senderId + " isResponse=" + isResponse + " msg=" + text);
-                if (isResponse == 0)
-                {
-                    // ピンに対してエコーバック
-                    var w = new PacketWriterImpl();
-                    w.WriteByte(1); // isResponse=true
-                    w.WriteString(text);
-                    SendToPlayer(EchoChannel, w.ToArray(), senderId, NetDelivery.Reliable);
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.Error("[ACMu] Echo parse error from=" + senderId + ": " + ex.Message);
             }
         }
 
