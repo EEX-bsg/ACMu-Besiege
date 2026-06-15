@@ -76,7 +76,6 @@ namespace ACMu.Host
             rb.mass = 0.4f;
             rb.drag = 0f;
             rb.angularDrag = 5f;
-            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
             try
             {

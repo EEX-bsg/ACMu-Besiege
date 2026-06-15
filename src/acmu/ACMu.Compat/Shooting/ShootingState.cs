@@ -11,6 +11,6 @@ namespace ACMu.Compat.Shooting
         [XmlElement("EntityDamage")]  public float EntityDamage = 100f;
         [XmlElement("BlockDamage")]   public float BlockDamage  = 1f;
         [XmlElement("Attaches")]      public bool  Attaches     = false;
-        [XmlElement("CollisionTypeS")] public string CollisionTypeS = "Discrete";
+        [XmlElement("CollisionTypeS")] public string CollisionTypeS = "ContinuousDynamic";
     }
 }
