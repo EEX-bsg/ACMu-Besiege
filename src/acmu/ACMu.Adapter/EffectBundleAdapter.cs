@@ -23,9 +23,10 @@ namespace ACMu.Adapter
         private readonly Dictionary<string, int> _totalCounts = new Dictionary<string, int>();
         // レンタル中(アクティブ)のGO。ReturnAll 用
         private readonly List<GameObject> _rentedList = new List<GameObject>();
-        // "bundle/asset" → 読み込み済みメッシュ/マテリアル (破棄しない)
-        private readonly Dictionary<string, Mesh>     _meshCache     = new Dictionary<string, Mesh>();
-        private readonly Dictionary<string, Material> _materialCache = new Dictionary<string, Material>();
+        // "bundle/asset" → 読み込み済みメッシュ/マテリアル/サウンド (破棄しない)
+        private readonly Dictionary<string, Mesh>      _meshCache     = new Dictionary<string, Mesh>();
+        private readonly Dictionary<string, Material>  _materialCache = new Dictionary<string, Material>();
+        private readonly Dictionary<string, AudioClip> _soundCache    = new Dictionary<string, AudioClip>();
 
         // 非アクティブGOの格納先。ACMUcore の子として生成されるため DontDestroyOnLoad 不要。
         private Transform _poolRoot;
@@ -323,6 +324,38 @@ namespace ACMu.Adapter
                 return go;
             }
             catch { return null; }
+        }
+
+        // clipNames からランダムに1つ選んで position で再生する。ModResource.GetAudioClip を使用。
+        internal void PlaySounds(System.Collections.Generic.List<string> clipNames, Vector3 position)
+        {
+            if (clipNames == null || clipNames.Count == 0) return;
+            int idx = clipNames.Count == 1 ? 0 : UnityEngine.Random.Range(0, clipNames.Count);
+            string name = clipNames[idx];
+            AudioClip clip = LoadAudioClip(name);
+            if (clip != null) AudioSource.PlayClipAtPoint(clip, position);
+        }
+
+        private AudioClip LoadAudioClip(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            AudioClip cached;
+            if (_soundCache.TryGetValue(name, out cached)) return cached;
+
+            try
+            {
+                var modClip = ModResource.GetAudioClip(name);
+                if (modClip != null && modClip.Available)
+                {
+                    AudioClip clip = modClip;
+                    if (clip != null) { _soundCache[name] = clip; return clip; }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[ACMu] LoadAudioClip: '" + name + "': " + ex.Message);
+            }
+            return null;
         }
 
         private ModAssetBundle GetOrLoadBundle(string resourceName)

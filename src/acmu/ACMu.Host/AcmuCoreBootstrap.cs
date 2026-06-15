@@ -73,6 +73,7 @@ namespace ACMu.Host
                 effectLoader.Fade,
                 effectLoader.LoadMeshAsset,
                 effectLoader.LoadMaterialFromTexture);
+            EffectRegistry.SetSoundFn(effectLoader.PlaySounds);
 
             RegisterTestCannon(services, registry);
             RegisterAdShooting(services, registry);

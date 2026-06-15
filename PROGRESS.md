@@ -1,235 +1,123 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-15 (M4 完了)
+最終更新: 2026-06-16 (M5 完了)
 
 ---
 
 ## 完了済みマイルストーン
 
-### M0 ✅ (タグ: M0)
-- `Directory.Build.props` + `Directory.Build.props.user` (gitignore)
-- `.gitignore` (bin/, obj/, docs/, ACMu/*.dll 等)
-- `build.sh`
-- `ACMu/Mod.xml` (Besiegeマニフェスト — `mod.json`ではなくXML形式)
+### M0 ✅
+- `Directory.Build.props`, `.gitignore`, `build.sh`, `ACMu/Mod.xml`
 
-ビルド: 警告0エラー0確認済み
+### M1 ✅
+Adapter / Host 基盤 (`ILog` `IGameSessionInfo` `IGameEventSource` `IBlockAccessor` `IConfigStore` + `AcmuCoreBootstrap` `LifecycleCoordinator` `AcmuServicesComponent`)
 
-**注**: M0当初に作成したSDK-styleの `ACMu.csproj` (ルート) と `src/ACMu.Host/AcmuMod.cs` は
-誤った設計であった。真のプロジェクトファイルは `src/acmu/acmu.csproj` (旧VS形式)。
-エントリーポイントは `src/acmu/Mod.cs` (`Mod : ModEntryPoint`)。
+### M2 ✅
+武装縦切り1本。`ProjectileService`, `WeaponHostBehaviour`, `FirePipeline`, `TestCannon` ブロック動作確認済み。
 
-### M1 ✅ (タグ: M1)
+### M3 ✅
+`INetworkTransport` 実装 (`ModNetTransport` / `PacketWriter` / `PacketReader`)。
 
-**Adapter層** (`src/ACMu.Adapter/`):
-| ファイル | 実装内容 | 特記事項 |
-|---|---|---|
-| `ConsoleLog.cs` | ILog + ILifecycleParticipant | ModConsole委譲、try-catchで飲み込み |
-| `GameSessionInfoAdapter.cs` | IGameSessionInfo + ILifecycleParticipant | StatMaster static参照 |
-| `GameEventSourceAdapter.cs` | IGameEventSource + ILifecycleParticipant | Events.* 購読、GetInvocationList per-try-catch |
-| `BlockAccessorAdapter.cs` | IBlockAccessor | BlockBehaviourラップ、IEnumerable foreach |
-| `ModIoConfigStore.cs` | IConfigStore + ILifecycleParticipant | Modding.ModIO (完全修飾必須) + BinaryWriter/JsonUtility |
+### M4 ✅ (実機確認済み 2026-06-15)
+弾体 MP 同期。`ProxyProjectile`, `ProjectileSyncTransport`, クライアント発射要求フロー。
 
-**Host層** (`src/ACMu.Host/`):
-| ファイル | 実装内容 |
+---
+
+### M5 ✅ — AdShootingProp 互換実装 (警告0エラー0確認済み)
+
+`ACMu.Compat/Shooting/` を全面実装。旧ACM (`Ad〜` 命名) は `OldCannon〜` 命名で再実装(クリーンルーム)。
+
+#### 追加ファイル一覧
+
+| ファイル | 内容 |
 |---|---|
-| `AcmuCoreBootstrap.cs` | 静的Initialize(): ACMUcore GameObject生成+配線 |
-| `LifecycleCoordinator.cs` | ILifecycleParticipant InitOrder順管理、SimulationToggled購読 |
-| `AcmuServicesComponent.cs` | IAcmuServices + IAcmuPluginHost (ApiVersion=1) |
-| `Null/NullNetworkTransport.cs` | INetworkTransport Null実装 (M3で差替え) |
-| `Null/NullWorldFrame.cs` | IWorldFrame Null実装 (M6で差替え) |
-| `Null/NullProjectileService.cs` | IProjectileService Null実装 (M2で差替え) |
-| `Null/NullWeaponRegistry.cs` | IWeaponRegistry Null実装 (M2で差替え) |
+| `XmlVector3.cs` | `[XmlAttribute x/y/z]` 補助型 |
+| `XmlTransform.cs` | Position/Rotation/Scale XML型。`ToPosition()` / `ToRotation()` 変換付き |
+| `MeshTransformRef.cs` | `<Mesh name="…"><Position/><Rotation/><Scale/>` XML型 |
+| `AssetBundleNameRef.cs` | `<Foo name="…" />` 汎用 name 属性型 |
+| `ShootingState.cs` | `<ShootingState>` サブ要素: Mass/Drag/AngularDrag/IgnoreGravity/EntityDamage/BlockDamage/CollisionTypeS/BounceCombineType/BounceStr/FrictionCombineType/FrictionStr/Mesh/Texture/Colliders |
+| `ColliderDefs.cs` | `ColliderDefBase` + `CapsuleColliderDef` / `BoxColliderDef` / `SphereColliderDef` + `ProjectileColliderList` (弾頭コライダー) |
+| `OldCannonModule.cs` | `[XmlRoot("AdShootingProp")]` BlockModule。全フィールド定義 |
+| `OldCannonWeapon.cs` | WeaponComponentBase。以下の機能を実装: |
+| | • hold-to-shoot / power / rate-of-fire スライダー |
+| | • バーストショット (useBurstShot / RateOfBurst / BurstShotNum) |
+| | • 弾薬管理 (DefaultAmmo / OnValidateFire) |
+| | • ランダム拡散 (RandomDiffusion、Seed 由来決定論乱数) |
+| | • スポーン遅延 (useDelay / DelayTime) |
+| | • ランダムインターバルジッター (RandomInterval) |
+| | • リコイル (RecoilMultiplier) |
+| | • 発射フラッシュエフェクト (ShotFlashPosition 対応) |
+| | • 発射音 / 着弾音 (Sounds / HitSounds) |
+| | • 爆発処理 (OnExplosion) |
+| `OldCannonHostBehaviour.cs` | WeaponHostBehaviour<OldCannonModule>。MuzzlePosition/Rotation、FlashMuzzlePosition/Rotation。AttachProjectileEffects: ProjectilePhysicsSetup / ProjectileMeshRestorer / ProjectileFuseTimer / トレイル/弾体エフェクト。OnFuseExplosion: 爆発力+エフェクト+Despawn |
+| `ProjectilePhysicsSetup.cs` | MonoBehaviour (ACMu.Compat.Shooting)。ShootingState → Rigidbody / カスタムコライダー / PhysicMaterial に反映。OnEnable/OnDisable でプール復元 |
+| `ProjectileMeshRestorer.cs` | MonoBehaviour (ACMu.Weapons)。カスタムメッシュ/マテリアルをプール安全に適用。transform オフセット時は子 GO を使用 |
+| `ProjectileFuseTimer.cs` | MonoBehaviour (ACMu.Compat.Shooting)。タイムフューズ: `Activate(handle, fuseTime, callback)` → 経過後 callback を1回呼ぶ。OnDisable でキャンセル |
+| `DamageRegistry.cs` | static delegate ブリッジ。`DamageApplierAdapter.ApplyDamage` を Bootstrap から注入 |
+| `EffectRegistry.cs` | static delegate ブリッジ。Spawn/Return/Fade/LoadMesh/LoadMaterial/PlaySounds を Bootstrap から注入 |
 
-### M1.5 ✅ — Mod 起動確立・M2 Core seam 追加 (タグなし / commit f7aadbb)
+#### 変更ファイル
 
-M0 が残した設計ミスの修正 + M2 のための Core 拡張。git tag は打っていないがビルド確認済み。
-
-**Mod 起動修正**:
-| 変更 | 内容 |
-|---|---|
-| `src/acmu/Mod.cs` | `OnLoad()` で `AcmuCoreBootstrap.Initialize()` を呼ぶ(元は空) |
-| `src/acmu/ACMu.Host/AcmuMod.cs` | 削除。M0 が作った重複エントリーポイント。`Mod.cs` だけで十分 |
-| `src/acmu/acmu.csproj` | `<PlatformTarget>x86</PlatformTarget>` 追加(DynamicText.dll arch 警告を除去) |
-| `build.sh` | `dotnet msbuild` → VS MSBuild(vswhere 自動検出)に変更。dotnet は Unity Full v3.5 プロファイル非対応 |
-
-**M2 Core seam 追加** (凍結対象だが調査ドキュメント M2_INVESTIGATION.md §3 でユーザー承認済み):
 | ファイル | 変更 |
 |---|---|
-| `ACMu.Core/Game/IBlockAccessorFactory.cs` | 新規。`FromGameObject(GameObject)` → `IBlockAccessor` のファクトリ契約 |
-| `ACMu.Core/IAcmuServices.cs` | `IBlockAccessorFactory Blocks { get; }` プロパティを追加 |
-| `ACMu.Adapter/BlockAccessorFactoryAdapter.cs` | 新規。`Block.From(go).InternalObject` → `BlockAccessorAdapter` を `Dictionary` キャッシュつきで返す |
-| `ACMu.Host/AcmuServicesComponent.cs` | `_blocks` フィールド + `Blocks` プロパティ追加、`Initialize()` 引数に追加 |
-| `ACMu.Host/AcmuCoreBootstrap.cs` | `BlockAccessorFactoryAdapter` を AddComponent して配線 |
+| `ACMu.Adapter/EffectBundleAdapter.cs` | エフェクトプール管理 + メッシュ/テクスチャ/サウンドのアセット読み込み。ModResource 優先→AssetBundle フォールバック |
+| `ACMu.Adapter/DamageApplierAdapter.cs` | ダメージ適用ブリッジ |
+| `ACMu.Host/AcmuCoreBootstrap.cs` | EffectBundleAdapter 追加、EffectRegistry.SetFunctions/SetSoundFn、DamageRegistry.SetApplyFn 配線 |
+| `ACMu/Blocks/ECannon.xml` | AdShootingProp ブロック定義。全新機能を記述。アセット未登録のためエフェクト/メッシュは空欄 |
 
-**seam の存在理由(次セッションの AI が読む想定)**:
-Weapons 層の `WeaponHostBehaviour` は `IWeaponHost.Block`(= `IBlockAccessor`)を組み立てる必要がある。
-しかし `BlockBehaviour`(decompile 型)は Adapter 外で触れてはならない(依存規律 rule 2)。
-この seam により Weapons は `services.Blocks.FromGameObject(this.gameObject)` を呼ぶだけで済む。
-decompile 型の取り扱いは Adapter の `BlockAccessorFactoryAdapter` が完全に隠蔽する。
+#### 設計判断
+
+- **ProjectilePhysicsSetup を ACMu.Compat に置く**: `ColliderDefBase` が Compat 層のため。ACMu.Compat→ACMu.Weapons は許容。逆方向は禁止
+- **タイムフューズ爆発**: `FirePipeline.OnDespawned` は `NotifyImpact/Explosion` を呼ばない(Timeout のみトリガー)。フューズは `OnFuseExplosion` で爆発処理を自前で行い、最後に `Despawn(Manual)` を呼ぶ
+- **デリゲートキャッシュ**: `_fuseDelegate = OnFuseExplosion` を `OnSimulateStart` で1回確保。発射ごとのデリゲート new を防ぐ
+- **拡散の決定論性**: `new System.Random(context.Seed)` で全ピア同一。MP で拡散方向が揃う
+- **`ModResource` 優先**: メッシュ/テクスチャはまず `ModResource.GetMesh/GetTexture` を試みてから AssetBundle にフォールバック。これが元 ACM のリソース管理手法と一致
+
+---
+
+## 未実装(将来フェーズ)
+
+| 機能 | 理由 |
+|---|---|
+| `Attaches = true` | 着弾時 Despawn 抑止 API が IProjectileService に存在しない。契約変更が必要 |
+| ミサイル誘導 (useBeacon / GuidRatio / GuidType) | M6 スコープ |
+| useBooster / useThrustDelayTimer | M6 スコープ |
+| useMagazine / マガジン弾倉システム | M6 スコープ |
+| エフェクト / メッシュ (ECannon.xml) | ゲーム側に Mod.xml リソース登録が必要。テスト環境で手動設定後に有効化 |
+
+---
+
+## 実機確認が必要な項目 (M5)
+
+- [ ] ECannon ブロックが Besiege で選択・配置できる
+- [ ] C キーで発射できる (hold-to-shoot)
+- [ ] 弾体が重力に従い飛翔し、3 秒後にタイムフューズ爆発する (`useTimefuse=true`)
+- [ ] 20 発で弾切れになる (`DefaultAmmo=20`)
+- [ ] リコイルでブロックが後退する (`RecoilMultiplier=0.8`)
+- [ ] 複数発の弾道が微妙にバラける (`RandomDiffusion=0.007`)
+- [ ] `useBurstShot=true` に変更したとき 3 発バーストになる
+- [ ] `useDelay=true` に変更したとき弾体スポーンが 0.1 秒遅延する
+- [ ] カプセルコライダー(弾頭)が壁に当たって衝突判定が取れる
+- [ ] MP: 弾体スポーン・フューズ爆発がホスト・クライアント双方で見える
 
 ---
 
 ## 既知の落とし穴・注意点
 
-### ModIO名前空間の衝突
-`ModIO` という独立したnamespaceが存在するため、`using Modding;` 下で `ModIO.ExistsFile()` を書くと
-CS0234エラーになる。**完全修飾 `Modding.ModIO.ExistsFile()` を使うこと。**
-
-### BlockBehaviour.Sliders / Toggles / Keys の型
-実際の戻り値は `IEnumerable<T>` であり `List<T>` ではない。インデックスアクセス不可。foreach必須。
-
 ### ビルドツール: VS MSBuildを使うこと
-`dotnet msbuild` は `TargetFrameworkProfile=Unity Full v3.5` (非標準プロファイル) を解決できず
-**MSB3644 エラーで失敗する**。代わりに Visual Studio の MSBuild を使う:
 ```powershell
 & "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" src/acmu/acmu.csproj /p:Configuration=Release /nologo /v:minimal
 ```
-`build.sh` は vswhere 経由で自動検出する。PowerShell での手動ビルドは上記コマンド。
 
 ### git コミット (PowerShell)
-here-string構文 `@'...'@` を使う (bash heredocは使えない):
 ```powershell
 git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 コミットメッセージ
 '@
 ```
 
-### Mod.cs がエントリーポイント / AcmuMod.cs は不要
-`src/acmu/Mod.cs` が唯一のエントリーポイント。Besiege はアセンブリ内の全 `ModEntryPoint` 実装を呼ぶ。
-`AcmuMod.cs`（二重エントリーポイント）は削除済み。`Mod.cs` が `AcmuCoreBootstrap.Initialize()` を呼ぶ。
+### ModIO名前空間の衝突
+`Modding.ModIO.ExistsFile()` — 完全修飾必須。
 
-### M2 ✅ — 武装の縦切り1本 (警告0エラー0確認済み)
-
-**ACMu.Weapons 層** (新規):
-| ファイル | 実装内容 |
-|---|---|
-| `ProjectileBody.cs` | MonoBehaviour。OnCollisionEnterでProjectileService.HandleImpactへ通知。_hit フラグで二重着弾防止 |
-| `ProjectileService.cs` | IProjectileService + MonoBehaviour + ILifecycleParticipant(InitOrder=300)。Queue<GameObject>プール、_epoch でライフタイムコルーチン無効化、StopAllCoroutinesでシミュ停止時クリーン |
-| `WeaponHostRegistry.cs` | internal static Dictionary<Type, WeaponRegistration>。WeaponRegistryImpl と WeaponHostBehaviour を繋ぐ内部ハブ |
-| `WeaponHostBehaviour.cs` | BlockModuleBehaviour<TModule> : IWeaponHost。SafeAwake でseam解決、OnSimulateStart でアクセサ確定+武装生成、SimulateUpdateAlways で権威チェック後 NotifyUpdate |
-| `FirePipeline.cs` | internal sealed。Time.time ベースのクールダウン、DelayedFire コルーチン、ImpactOccurred/Despawned を内部で購読・Dispose でunsubscribe |
-| `WeaponRegistryImpl.cs` | IWeaponRegistry。AddBlockModule<TModule, WeaponHostBehaviour<TModule>> + WeaponHostRegistry 登録。二重登録は例外 |
-
-**ACMu.Compat/TestCannon 層** (新規):
-| ファイル | 実装内容 |
-|---|---|
-| `TestCannonModule.cs` | [Serializable] BlockModule。FireKey / SpeedSlider の MKeyReference / MSliderReference を定義 |
-| `TestCannonWeapon.cs` | WeaponComponentBase。OnAttached でBaseSpec設定、OnUpdate でIsKeyHeldチェック、OnBeforeFire でスライダー値をShotに反映 |
-
-**Host 配線変更**:
-| ファイル | 変更 |
-|---|---|
-| `AcmuCoreBootstrap.cs` | ProjectileService(AddComponent+InitializeService) + WeaponRegistryImpl(new) を追加。RegisterTestCannon でSphere prefab作成+登録 |
-| `AcmuServicesComponent.Initialize()` | シグネチャに IProjectileService/IWeaponRegistry を追加。Null実装を置換 |
-| `acmu.csproj` | ACMu.Weapons / ACMu.Compat の Compile Include を追加 |
-
-**データ**:
-| ファイル | 内容 |
-|---|---|
-| `ACMu/Blocks/TestCannon.xml` | ブロック定義。ModuleMapperTypes (Key/Slider) + Modules (AcmuTestCannon) + Collider + BasePoint |
-| `ACMu/Mod.xml` | `<Block path="Blocks/TestCannon.xml" />` 追加 |
-
-**設計上の判断**:
-- `WeaponHostBehaviour<TModule>` は Generic MonoBehaviour。Unity 5.4 で動作するのは型が具体確定済みの場合のみ(BCMがAddBlockModule内部で解決)
-- 発射キー監視は `TestCannonWeapon.OnUpdate` に配置。Generic Host は TModule の形状を知らないため、Key名定数を同層のConst経由で渡す
-- `ProjectileService.ImpactOccurred` は `internal` event。FirePipeline(同層)のみ購読できる。IProjectileService 公開面は汚染しない
-- Sphere prefab は `CreatePrimitive` でランタイム生成。メッシュアセット不要。SphereCollider が衝突検知も担う
-
----
-
-### M3 ✅ — INetworkTransport 実装 (タグなし / commit fdd6c9e)
-
-**ACMu.Net 層**:
-| ファイル | 実装内容 |
-|---|---|
-| `PacketWriterImpl.cs` | MemoryStream + BinaryWriter。Vector3d(double×3)、Quaternion(float×4)、UTF8文字列+長さ前置 |
-| `PacketReaderImpl.cs` | MemoryStream + BinaryReader |
-| `ModNetTransport.cs` | INetworkTransport 実装。Reliable/Unreliable 各1メッセージ型、ペイロード先頭1バイト=channelId で多重化 |
-
-**Host 配線変更**: NullNetworkTransport → ModNetTransport に差し替え。ACMu内部チャネル0でバージョンhello交換。
-
-**注意**: M3 完了後に `ConsoleLog を Debug.Log 併用に変更・ex.ToString禁止違反根絶・Bootstrap try-catch 追加` (commit 028fd95)、`エコーテスト用コードを削除` (commit 899d77e) を実施。
-
----
-
-### M4 ✅ — 武装の MP 化(スポーン同期) (警告0エラー0確認済み)
-
-**ACMu.Weapons 層** (新規・変更):
-| ファイル | 実装内容 |
-|---|---|
-| `ProxyProjectile.cs` | クライアント側プロキシ弾 MonoBehaviour。速度外挿+lerp平滑補正。物理なし(Transform 駆動のみ) |
-| `ProjectileSyncTransport.cs` | ホスト→クライアント同期(Spawn/Despawn/StateSnapshot/AliveList)＋クライアント→ホスト発射要求(ChFireReq)。InitOrder=350 |
-| `ProjectileService.cs` | プロキシ受信 API 追加(ReceiveProxySpawn/Despawn/Snapshot/ReconcileAliveList)。ライフタイムコルーチンもプロキシ対応 |
-| `FirePipeline.cs` | MP クライアント時 `_projSync.SendFireRequest()` で発射要求を送信(ローカルスポーン不可)。SP/ホストは従来通りローカルスポーン |
-| `WeaponHostBehaviour.cs` | SafeAwake で `ProjectileSyncTransport` を取得し FirePipeline に渡す |
-
-**Adapter 変更**:
-| ファイル | 変更内容 |
-|---|---|
-| `GameSessionInfoAdapter.cs` | IsSimulating に `Modding.Game.IsSimulatingLocal` を追加(観戦クライアント除外) |
-
-**設計上の判断**:
-- `ProjectileSyncTransport` は当初 `ACMu.Net` に置いたが、`ProjectileService`(ACMu.Weapons)を直接参照するため実装層間横参照違反。`ACMu.Weapons` に移動して解消
-- クライアント発射要求はホスト権威実行。クライアントはプロキシを broadcast で受け取るためローカルスポーン不要
-- `NetTarget.Host` で発射要求を送信。`IsMultiplayer && !IsHost && projSync != null` の条件で分岐
-- AliveList 1秒周期による整合性掃除で孤児プロキシ弾を `NetworkCorrection` で除去
-
----
-
-**実機確認済み(2026-06-15)**: ホスト・クライアント双方で弾が見える。残留弾なし。
-
----
-
-## M5 — ACM Compat: AdShootingProp 互換実装
-
-### 設計判断: Phase 分割 (2026-06-15 確定)
-
-旧ACM互換実装を段階的に進める。Phase B/C は将来セッションに委ねる。
-
-| Phase | 内容 | 状態 |
-|---|---|---|
-| **A** | 砲撃の基本動作(発射・爆発・ダメージ・MP同期)。プリミティブ球体弾 | **進行中** |
-| **B** | AssetBundle メッシュ/テクスチャ/エフェクト/サウンド読み込み | 未着手 |
-| **C** | ミサイル誘導・タイムフューズ・バーストショット | 未着手 |
-
-**Phase B 保留理由**: `ModResource` 経由 AssetBundle 読み込みはオリジナル ACM が内部 ResourceRepository を持つ複雑な機構。ACM 解析ドキュメントが不足しており、別 AI セッションで docs 化が必要。
-
-### Phase A 実装 ✅ (警告0エラー0確認済み / 実機確認待ち)
-
-**新規ファイル (`src/acmu/ACMu.Compat/Shooting/`)**:
-| ファイル | 内容 |
-|---|---|
-| `XmlVector3.cs` | `[XmlAttribute("x/y/z")]` の XML 補助型 |
-| `XmlTransform.cs` | Position/Rotation/Scale をまとめた XML 補助型。`ToPosition()` / `ToRotation()` 変換付き |
-| `ShootingState.cs` | `<ShootingState>` サブ要素(Mass/Drag/EntityDamage/BlockDamage/Attaches 等) |
-| `AdShootingModule.cs` | `[XmlRoot("AdShootingProp")]` BlockModule。FireKey/PowerSlider/RateOfFireSlider MReference + ProjectileStart 他 |
-| `AdShootingWeapon.cs` | WeaponComponentBase。hold-to-shoot トグル・パワースライダー・レートスライダー対応 |
-| `AdShootingHostBehaviour.cs` | WeaponHostBehaviour<AdShootingModule>。ProjectileStart から MuzzlePosition/MuzzleRotation を計算 |
-
-**修正**:
-| ファイル | 変更 |
-|---|---|
-| `ACMu.Weapons/WeaponRegistryImpl.cs` | `AddBlockModule` の `inMP` 引数を固定 `false` → `registration.MultiplayerCompatible` に修正 |
-| `ACMu.Host/AcmuCoreBootstrap.cs` | `RegisterAdShooting()` 追加: 共有球体 prefab 登録(key=`"compat-adshooting"`) + `AdShootingProp` BCM 登録 |
-
-**設計上の判断**:
-- Module → Weapon データ受け渡し: `AdShootingWeapon.LoadingModule` (internal static) を `AdShootingHostBehaviour.OnSimulateStart` 内でセット → `base.OnSimulateStart()` 内の `AttachTo → OnAttached` がモジュール値を読む → null クリア。Unity はシングルスレッドのため安全
-- Phase A は共有球体弾を使用。Per-block 物理 (Mass/Drag) 適用は Phase B
-- `HoldToShootToggle` は MToggleReference ではなく `TryGetToggle("hold-to-shoot")` で読み取り(不確かな BCM 型を避ける)
-
----
-
-## 次のタスク
-
-> M5 Phase A 完了後: Phase B (AssetBundle 読み込み docs 作成 → 実装)
-
----
-
-## アーキテクチャ上の判断メモ
-
-| 判断 | 理由 |
-|---|---|
-| AcmuCoreBootstrap (Host) → ConsoleLog等 (Adapter) を直接参照 | Host は Composition Root ("配線")。Contract経由では AddComponent できない |
-| Null実装でexplicit event accessor `{ add{} remove{} }` を使用 | CS0067警告回避 + 意味的正確性(購読しても呼ばれない) |
-| NetworkSendRate = 20f (固定値) | NetworkScene.ServerSettings の型が不明確。安全なデフォルト値を返す |
-| LocalPlayerId = 0 (固定値) | reflection禁止環境でローカルネットIDの取得APIが特定できなかった |
+### `CollisionTypeS` の大文字 S
+`<CollisionTypeS>ContinuousDynamic</CollisionTypeS>` — 末尾が大文字 S。旧 ACM XML は `<CollisionTypes>` だったが、ShootingState フィールド名に合わせて修正済み。

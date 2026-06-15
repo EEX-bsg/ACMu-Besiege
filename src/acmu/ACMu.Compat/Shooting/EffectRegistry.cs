@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ACMu.Compat.Shooting
 {
-    // Bootstrap が SetFunctions でデリゲートを注入する。
+    // Bootstrap が SetFunctions/SetSoundFn でデリゲートを注入する。
     // Compat 層が Adapter 型を直接参照せずプール/ライフタイム管理・アセット読み込みを委譲できる。
     internal static class EffectRegistry
     {
@@ -14,6 +15,7 @@ namespace ACMu.Compat.Shooting
         private static Action<GameObject>                    _fadeFn;
         private static Func<string, string, Mesh>            _loadMeshFn;
         private static Func<string, string, Material>        _loadMaterialFn;
+        private static Action<List<string>, Vector3>         _playSoundsFn;
 
         internal static void SetFunctions(
             Func<string, string, int, GameObject> rentFn,
@@ -31,6 +33,11 @@ namespace ACMu.Compat.Shooting
             _fadeFn          = fadeFn;
             _loadMeshFn      = loadMeshFn;
             _loadMaterialFn  = loadMaterialFn;
+        }
+
+        internal static void SetSoundFn(Action<List<string>, Vector3> fn)
+        {
+            _playSoundsFn = fn;
         }
 
         // GO をプールからレンタルして pos/rot に配置・アクティブ化する。
@@ -89,24 +96,30 @@ namespace ACMu.Compat.Shooting
             catch { }
         }
 
-        // bundle 内の Mesh アセットを返す。見つからない/未設定なら null。
+        // Mesh アセットを返す。ModResource優先、なければ bundle 内を検索。assetName が空/"none" は null を返す。
         internal static Mesh LoadMesh(string bundle, string assetName)
         {
             if (_loadMeshFn == null) return null;
-            if (string.IsNullOrEmpty(bundle) || string.IsNullOrEmpty(assetName) || assetName == "none")
-                return null;
+            if (string.IsNullOrEmpty(assetName) || assetName == "none") return null;
             try { return _loadMeshFn(bundle, assetName); }
             catch { return null; }
         }
 
-        // bundle 内の Texture2D からマテリアルを生成して返す。見つからない/未設定なら null。
+        // Material/Texture アセットを返す。ModResource優先、なければ bundle 内を検索。
         internal static Material LoadMaterial(string bundle, string textureName)
         {
             if (_loadMaterialFn == null) return null;
-            if (string.IsNullOrEmpty(bundle) || string.IsNullOrEmpty(textureName) || textureName == "none")
-                return null;
+            if (string.IsNullOrEmpty(textureName) || textureName == "none") return null;
             try { return _loadMaterialFn(bundle, textureName); }
             catch { return null; }
+        }
+
+        // 名前リストからランダムに1つを選択して position で再生する。リストが空ならスキップ。
+        internal static void PlaySounds(List<string> clipNames, Vector3 position)
+        {
+            if (_playSoundsFn == null || clipNames == null || clipNames.Count == 0) return;
+            try { _playSoundsFn(clipNames, position); }
+            catch { }
         }
     }
 }

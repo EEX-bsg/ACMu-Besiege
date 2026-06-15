@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using ACMu.Core.Weapons;
+using ACMu.Weapons;
 using UnityEngine;
 
 namespace ACMu.Compat.Shooting
@@ -11,6 +14,7 @@ namespace ACMu.Compat.Shooting
         // Unity はシングルスレッドのためこの static パターンは安全。
         internal static OldCannonModule LoadingModule;
 
+        // OnAttached でキャッシュ
         private bool   _projectilesExplode;
         private float  _explodePower;
         private float  _explodeUpPower;
@@ -20,6 +24,26 @@ namespace ACMu.Compat.Shooting
         private int    _poolSize;
         private float  _blockDamage;
         private float  _entityDamage;
+
+        // OnSimulationStart でキャッシュ
+        private float  _recoilMultiplier;
+        private float  _randomDiffusion;
+        private float  _randomInterval;
+        private bool   _useDelay;
+        private float  _delayTime;
+        private bool   _useBurstShot;
+        private float  _rateOfBurst;
+        private int    _burstShotNum;
+        private int    _defaultAmmo;
+
+        // サウンドリスト: OnSimulationStart で一度構築、ホットパスで参照のみ
+        private readonly List<string> _soundNames    = new List<string>();
+        private readonly List<string> _hitSoundNames = new List<string>();
+
+        // バースト/弾薬管理の実行時状態
+        private float _savedInterval;
+        private int   _burstRemaining;
+        private int   _ammoRemaining;
 
         protected override void OnAttached()
         {
@@ -50,6 +74,44 @@ namespace ACMu.Compat.Shooting
                 Host.BaseSpec.ProjectileLifetimeSeconds = 0.05f;
         }
 
+        protected override void OnSimulationStart()
+        {
+            OldCannonModule m = LoadingModule;
+            if (m == null) return;
+
+            _recoilMultiplier = m.RecoilMultiplier;
+            _randomDiffusion  = m.RandomDiffusion;
+            _randomInterval   = m.RandomInterval;
+            _useDelay         = m.UseDelay;
+            _delayTime        = m.DelayTime;
+            _useBurstShot     = m.UseBurstShot;
+            _rateOfBurst      = m.RateOfBurst;
+            _burstShotNum     = m.BurstShotNum;
+            _defaultAmmo      = m.DefaultAmmo;
+
+            _savedInterval  = Host.BaseSpec.FireIntervalSeconds;
+            _burstRemaining = 0;
+            _ammoRemaining  = _defaultAmmo;
+
+            _soundNames.Clear();
+            if (m.Sounds != null)
+                foreach (var s in m.Sounds)
+                    if (s != null && !string.IsNullOrEmpty(s.Name)) _soundNames.Add(s.Name);
+
+            _hitSoundNames.Clear();
+            if (m.HitSounds != null)
+                foreach (var s in m.HitSounds)
+                    if (s != null && !string.IsNullOrEmpty(s.Name)) _hitSoundNames.Add(s.Name);
+        }
+
+        protected override void OnSimulationStop()
+        {
+            // バースト中にシミュが止まったとき、インターバルを戻す
+            if (_useBurstShot && _savedInterval > 0f)
+                Host.BaseSpec.FireIntervalSeconds = _savedInterval;
+            _burstRemaining = 0;
+        }
+
         protected override void OnUpdate(float deltaTime)
         {
             if (!Host.IsAuthority) return;
@@ -58,44 +120,113 @@ namespace ACMu.Compat.Shooting
             if (!Host.Block.TryGetToggle(OldCannonModule.HoldToShootToggleName, out holdToShoot))
                 holdToShoot = true;
 
-            bool fire;
-            if (holdToShoot)
-                fire = Host.Block.IsKeyHeld(OldCannonModule.FireKeyName);
-            else
-                fire = Host.Block.IsKeyPressed(OldCannonModule.FireKeyName);
+            bool keyHeld    = Host.Block.IsKeyHeld(OldCannonModule.FireKeyName);
+            bool keyPressed = Host.Block.IsKeyPressed(OldCannonModule.FireKeyName);
+            bool trigger    = holdToShoot ? keyHeld : keyPressed;
 
-            if (fire)
-                Host.RequestFire();
+            if (_useBurstShot)
+            {
+                // 新バースト開始: トリガーかつ前のバーストが完了済み
+                if (trigger && _burstRemaining == 0)
+                {
+                    _burstRemaining = _burstShotNum;
+                    Host.BaseSpec.FireIntervalSeconds = _rateOfBurst > 0f ? 1f / _rateOfBurst : 0.1f;
+                }
+                if (_burstRemaining > 0)
+                    Host.RequestFire();
+            }
+            else
+            {
+                if (trigger)
+                    Host.RequestFire();
+            }
+        }
+
+        protected override FireDecision OnValidateFire(FireContext context)
+        {
+            if (_defaultAmmo > 0 && _ammoRemaining <= 0)
+                return FireDecision.Suppress;
+            return FireDecision.Proceed;
         }
 
         protected override void OnBeforeFire(FireContext context)
         {
+            // スライダーから弾速 / 発射レート上書き
             float power;
             if (Host.Block.TryGetSlider(OldCannonModule.PowerSliderName, out power))
                 context.Shot.MuzzleVelocity = power;
 
             float rateOfFire;
-            if (Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out rateOfFire))
+            if (!_useBurstShot && Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out rateOfFire))
                 Host.BaseSpec.FireIntervalSeconds = rateOfFire;
 
-            EffectRegistry.Spawn(_bundleName, _shotFlashEffectName, Host.MuzzlePosition, Host.MuzzleRotation, _poolSize, true);
+            // バースト残弾カウント処理
+            if (_useBurstShot && _burstRemaining > 0)
+            {
+                _burstRemaining--;
+                if (_burstRemaining == 0)
+                    Host.BaseSpec.FireIntervalSeconds = _savedInterval;
+            }
+
+            // 弾薬消費
+            if (_defaultAmmo > 0 && _ammoRemaining > 0)
+                _ammoRemaining--;
+
+            // ランダム拡散: Seed 由来の乱数で全ピア決定論的
+            if (_randomDiffusion > 0f)
+            {
+                var rng = new System.Random(context.Seed);
+                float dx = (float)(rng.NextDouble() * 2.0 - 1.0) * _randomDiffusion;
+                float dy = (float)(rng.NextDouble() * 2.0 - 1.0) * _randomDiffusion;
+                context.Direction = (context.Direction
+                    + context.MuzzleRotation * new Vector3(dx, dy, 0f)).normalized;
+            }
+
+            // スポーン遅延
+            if (_useDelay && _delayTime > 0f)
+                context.DelaySeconds = _delayTime;
+
+            // ランダムインターバルジッター(発射タイミングのバラつき)
+            if (_randomInterval > 0f)
+                context.DelaySeconds += UnityEngine.Random.Range(0f, _randomInterval);
+
+            // 発射フラッシュエフェクト(専用位置があればそちらを使う)
+            var hostBehaviour = Host as OldCannonHostBehaviour;
+            Vector3    flashPos = hostBehaviour != null ? hostBehaviour.FlashMuzzlePosition : Host.MuzzlePosition;
+            Quaternion flashRot = hostBehaviour != null ? hostBehaviour.FlashMuzzleRotation : Host.MuzzleRotation;
+            EffectRegistry.Spawn(_bundleName, _shotFlashEffectName, flashPos, flashRot, _poolSize, true);
+
+            // 発射音
+            EffectRegistry.PlaySounds(_soundNames, flashPos);
         }
 
-        // 発射後: このホストが所有する弾体にエフェクトをアタッチする。
-        // Projectiles.Spawned はグローバルイベントで全ホストに届くが、
-        // OnAfterFire は発射元ホストにのみ届くため複数ブロック配置でも重複しない。
         protected override void OnAfterFire(FireContext context, ProjectileHandle projectile)
         {
             if (!projectile.IsValid) return;
+
+            // 弾体エフェクト / フューズ / メッシュ等をアタッチ
             var host = Host as OldCannonHostBehaviour;
-            if (host != null) host.AttachProjectileEffects(projectile);
+            if (host != null)
+                host.AttachProjectileEffects(projectile);
+
+            // リコイル: 砲身の Rigidbody に逆方向の衝撃を加える
+            if (_recoilMultiplier > 0f && host != null)
+            {
+                var blockRb = host.GetComponent<Rigidbody>();
+                if (blockRb != null)
+                    blockRb.AddForce(
+                        -context.Direction * context.Shot.MuzzleVelocity * _recoilMultiplier,
+                        ForceMode.Impulse);
+            }
         }
 
-        // 直接衝突時のダメージ。爆発範囲ダメージは含まない(docs/ACM/explosion-mechanics.md §3 参照)。
         protected override void OnImpact(ImpactContext context)
         {
             if (context.HitObject != null && (_blockDamage > 0f || _entityDamage > 0f))
                 DamageRegistry.Apply(context.HitObject, _blockDamage, _entityDamage);
+
+            // 着弾音
+            EffectRegistry.PlaySounds(_hitSoundNames, context.Position);
         }
 
         protected override void OnExplosion(ImpactContext context)

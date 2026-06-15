@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ACMu.Core.Weapons;
 using ACMu.Weapons;
@@ -12,6 +13,23 @@ namespace ACMu.Compat.Shooting
         // handle.Id → 弾体にアタッチしたトレイル/弾体エフェクトGO
         private readonly Dictionary<int, GameObject> _trailGos  = new Dictionary<int, GameObject>();
         private readonly Dictionary<int, GameObject> _bulletGos = new Dictionary<int, GameObject>();
+
+        // エフェクト・爆発に必要な情報をシミュ開始時にキャッシュ
+        private string _bundleName      = "";
+        private string _explodeEffect   = "";
+        private float  _explodePower    = 0f;
+        private float  _explodeUpPower  = 0f;
+        private bool   _projectilesExplode = false;
+        private float  _explosionRadius = 0f;
+        private int    _poolSize        = 10;
+        private float  _randomFuseInterval = 0f;
+        private bool   _useTimefuse     = false;
+        private float  _fuseTime        = 3f;
+        private float  _fuseDelayTime   = 0f;
+        private XmlTransform _shotFlashTransform;
+
+        // フューズ爆発デリゲート: OnSimulateStart で1回生成してキャッシュ
+        private Action<ProjectileHandle> _fuseDelegate;
 
         public override Vector3 MuzzlePosition
         {
@@ -33,11 +51,44 @@ namespace ACMu.Compat.Shooting
             }
         }
 
+        internal Vector3 FlashMuzzlePosition
+        {
+            get
+            {
+                if (_shotFlashTransform == null) return MuzzlePosition;
+                return transform.position + transform.rotation * _shotFlashTransform.ToPosition();
+            }
+        }
+
+        internal Quaternion FlashMuzzleRotation
+        {
+            get
+            {
+                if (_shotFlashTransform == null) return MuzzleRotation;
+                return transform.rotation * _shotFlashTransform.ToRotation();
+            }
+        }
+
         public override void OnSimulateStart()
         {
             OldCannonModule m = Module;
             if (m != null && m.Shooting != null)
                 _collisionMode = ParseCollisionMode(m.Shooting.CollisionTypeS);
+
+            if (m != null)
+            {
+                _bundleName        = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+                _explodeEffect     = m.ExplodeEffect ?? "";
+                _explodePower      = m.ExplodePower;
+                _explodeUpPower    = m.ExplodeUpPower;
+                _projectilesExplode = m.ProjectilesExplode;
+                _poolSize          = m.PoolSize;
+                _randomFuseInterval = m.RandomFuseInterval;
+                _useTimefuse       = m.UseTimefuse;
+                _fuseTime          = m.FuseTime;
+                _fuseDelayTime     = m.FuseDelayTime;
+                _shotFlashTransform = m.ShotFlashPosition;
+            }
 
             if (Projectiles != null)
                 Projectiles.Despawned += OnProjectileDespawned;
@@ -45,6 +96,11 @@ namespace ACMu.Compat.Shooting
             OldCannonWeapon.LoadingModule = m;
             base.OnSimulateStart();
             OldCannonWeapon.LoadingModule = null;
+
+            // ExplosionRadius は OnAttached 内で BaseSpec に設定されるため base() の後で読む
+            _explosionRadius = BaseSpec != null ? BaseSpec.ExplosionRadius : 0f;
+
+            _fuseDelegate = OnFuseExplosion;
         }
 
         public override void OnSimulateStop()
@@ -55,6 +111,7 @@ namespace ACMu.Compat.Shooting
             _trailGos.Clear();
             _bulletGos.Clear();
             EffectRegistry.ReturnAll();
+            _fuseDelegate = null;
 
             base.OnSimulateStop();
         }
@@ -66,16 +123,24 @@ namespace ACMu.Compat.Shooting
             GameObject projGo;
             if (!Projectiles.TryGetGameObject(handle, out projGo)) return;
 
-            var rb = projGo.GetComponent<Rigidbody>();
-            if (rb != null) rb.collisionDetectionMode = _collisionMode;
-
             OldCannonModule m = Module;
             if (m == null) return;
 
-            string bundle   = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
-            int    poolSize = m.PoolSize;
+            string bundle   = _bundleName;
+            int    poolSize = _poolSize;
 
-            // 弾体メッシュ/テクスチャ: 指定があれば球体デフォルトを上書き。プール返却時に自動復元。
+            // ---- Rigidbody / Collider / PhysicMaterial ----
+            var rb = projGo.GetComponent<Rigidbody>();
+            if (rb != null) rb.collisionDetectionMode = _collisionMode;
+
+            if (m.Shooting != null)
+            {
+                var physics = projGo.GetComponent<ProjectilePhysicsSetup>();
+                if (physics == null) physics = projGo.AddComponent<ProjectilePhysicsSetup>();
+                physics.Configure(m.Shooting);
+            }
+
+            // ---- 弾頭メッシュ/テクスチャ ----
             if (m.Shooting != null)
             {
                 string meshName    = m.Shooting.Mesh    != null ? m.Shooting.Mesh.Name    : "";
@@ -86,10 +151,32 @@ namespace ACMu.Compat.Shooting
                 {
                     var restorer = projGo.GetComponent<ProjectileMeshRestorer>();
                     if (restorer == null) restorer = projGo.AddComponent<ProjectileMeshRestorer>();
-                    restorer.Apply(mesh, mat);
+
+                    Vector3    offset   = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetPosition() : Vector3.zero;
+                    Quaternion rotation = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetRotation() : Quaternion.identity;
+                    Vector3    scale    = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetScale()    : Vector3.one;
+                    restorer.Apply(mesh, mat, offset, rotation, scale);
                 }
             }
 
+            // ---- タイムフューズ ----
+            if (_useTimefuse && _fuseDelegate != null)
+            {
+                float fuse;
+                if (!Block.TryGetSlider(OldCannonModule.FuseTimerSliderName, out fuse))
+                    fuse = _fuseTime;
+
+                float jitter = _randomFuseInterval > 0f
+                    ? UnityEngine.Random.Range(-_randomFuseInterval, _randomFuseInterval)
+                    : 0f;
+                fuse = Mathf.Max(fuse + jitter, _fuseDelayTime);
+
+                var fuseTimer = projGo.GetComponent<ProjectileFuseTimer>();
+                if (fuseTimer == null) fuseTimer = projGo.AddComponent<ProjectileFuseTimer>();
+                fuseTimer.Activate(handle, fuse, _fuseDelegate);
+            }
+
+            // ---- トレイル/弾体エフェクト ----
             if (!string.IsNullOrEmpty(m.TrailEffect) && m.TrailEffect != "none")
             {
                 var trail = EffectRegistry.Spawn(bundle, m.TrailEffect, projGo.transform.position, projGo.transform.rotation, poolSize, false);
@@ -115,12 +202,39 @@ namespace ACMu.Compat.Shooting
             }
         }
 
+        // タイムフューズが発火したときにホストが直接爆発処理を行う。
+        private void OnFuseExplosion(ProjectileHandle handle)
+        {
+            GameObject projGo;
+            if (Projectiles == null || !Projectiles.TryGetGameObject(handle, out projGo)) return;
+
+            Vector3 pos = projGo.transform.position;
+
+            if (_projectilesExplode && _explosionRadius > 0f)
+            {
+                float scaledPower = _explodePower   * 2f;
+                float scaledUp    = _explodeUpPower * 0.25f;
+                Collider[] hits = Physics.OverlapSphere(pos, _explosionRadius);
+                foreach (var col in hits)
+                {
+                    Rigidbody colRb = col.attachedRigidbody;
+                    if (colRb != null)
+                        colRb.AddExplosionForce(scaledPower, pos, _explosionRadius, scaledUp);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_explodeEffect))
+                EffectRegistry.Spawn(_bundleName, _explodeEffect, pos, Quaternion.identity, _poolSize, true);
+
+            Projectiles.Despawn(handle, DespawnReason.Manual);
+        }
+
         // Despawned ハンドラ
         // ※ Despawned は SetActive(false) 後に発火するため TryGetGameObject は使えない
         private void OnProjectileDespawned(ProjectileHandle handle, DespawnReason reason)
         {
             OldCannonModule m = Module;
-            string bundle      = m != null && m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+            string bundle      = _bundleName;
 
             GameObject trailGo;
             if (_trailGos.TryGetValue(handle.Id, out trailGo))
@@ -133,7 +247,7 @@ namespace ACMu.Compat.Shooting
             if (_bulletGos.TryGetValue(handle.Id, out bulletGo))
             {
                 _bulletGos.Remove(handle.Id);
-                if (reason == DespawnReason.Impact)
+                if (reason == DespawnReason.Impact || reason == DespawnReason.Manual)
                 {
                     string bulletEffect = m != null ? m.BulletEffect : "";
                     EffectRegistry.Return(bundle, bulletEffect, bulletGo);
