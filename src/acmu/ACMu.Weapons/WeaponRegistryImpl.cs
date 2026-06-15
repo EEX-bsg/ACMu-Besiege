@@ -21,7 +21,7 @@ namespace ACMu.Weapons
                     "[ACMu] WeaponRegistry: duplicate ModuleName: " + registration.ModuleName);
 
             WeaponHostRegistry.Register(typeof(TModule), registration);
-            CustomModules.AddBlockModule<TModule, TBehaviour>(registration.ModuleName, false);
+            CustomModules.AddBlockModule<TModule, TBehaviour>(registration.ModuleName, registration.MultiplayerCompatible);
         }
     }
 }

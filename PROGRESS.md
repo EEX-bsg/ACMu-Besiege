@@ -180,9 +180,48 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 
 ---
 
-## 次のタスク: M5 (未着手)
+## M5 — ACM Compat: AdShootingProp 互換実装
 
-> M4 完了。次は Compat 第1弾(旧ACM互換)。
+### 設計判断: Phase 分割 (2026-06-15 確定)
+
+旧ACM互換実装を段階的に進める。Phase B/C は将来セッションに委ねる。
+
+| Phase | 内容 | 状態 |
+|---|---|---|
+| **A** | 砲撃の基本動作(発射・爆発・ダメージ・MP同期)。プリミティブ球体弾 | **進行中** |
+| **B** | AssetBundle メッシュ/テクスチャ/エフェクト/サウンド読み込み | 未着手 |
+| **C** | ミサイル誘導・タイムフューズ・バーストショット | 未着手 |
+
+**Phase B 保留理由**: `ModResource` 経由 AssetBundle 読み込みはオリジナル ACM が内部 ResourceRepository を持つ複雑な機構。ACM 解析ドキュメントが不足しており、別 AI セッションで docs 化が必要。
+
+### Phase A 実装 ✅ (警告0エラー0確認済み / 実機確認待ち)
+
+**新規ファイル (`src/acmu/ACMu.Compat/Shooting/`)**:
+| ファイル | 内容 |
+|---|---|
+| `XmlVector3.cs` | `[XmlAttribute("x/y/z")]` の XML 補助型 |
+| `XmlTransform.cs` | Position/Rotation/Scale をまとめた XML 補助型。`ToPosition()` / `ToRotation()` 変換付き |
+| `ShootingState.cs` | `<ShootingState>` サブ要素(Mass/Drag/EntityDamage/BlockDamage/Attaches 等) |
+| `AdShootingModule.cs` | `[XmlRoot("AdShootingProp")]` BlockModule。FireKey/PowerSlider/RateOfFireSlider MReference + ProjectileStart 他 |
+| `AdShootingWeapon.cs` | WeaponComponentBase。hold-to-shoot トグル・パワースライダー・レートスライダー対応 |
+| `AdShootingHostBehaviour.cs` | WeaponHostBehaviour<AdShootingModule>。ProjectileStart から MuzzlePosition/MuzzleRotation を計算 |
+
+**修正**:
+| ファイル | 変更 |
+|---|---|
+| `ACMu.Weapons/WeaponRegistryImpl.cs` | `AddBlockModule` の `inMP` 引数を固定 `false` → `registration.MultiplayerCompatible` に修正 |
+| `ACMu.Host/AcmuCoreBootstrap.cs` | `RegisterAdShooting()` 追加: 共有球体 prefab 登録(key=`"compat-adshooting"`) + `AdShootingProp` BCM 登録 |
+
+**設計上の判断**:
+- Module → Weapon データ受け渡し: `AdShootingWeapon.LoadingModule` (internal static) を `AdShootingHostBehaviour.OnSimulateStart` 内でセット → `base.OnSimulateStart()` 内の `AttachTo → OnAttached` がモジュール値を読む → null クリア。Unity はシングルスレッドのため安全
+- Phase A は共有球体弾を使用。Per-block 物理 (Mass/Drag) 適用は Phase B
+- `HoldToShootToggle` は MToggleReference ではなく `TryGetToggle("hold-to-shoot")` で読み取り(不確かな BCM 型を避ける)
+
+---
+
+## 次のタスク
+
+> M5 Phase A 完了後: Phase B (AssetBundle 読み込み docs 作成 → 実装)
 
 ---
 

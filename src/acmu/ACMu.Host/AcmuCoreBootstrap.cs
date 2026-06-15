@@ -1,5 +1,6 @@
 using System;
 using ACMu.Adapter;
+using ACMu.Compat.Shooting;
 using ACMu.Compat.TestCannon;
 using ACMu.Core;
 using ACMu.Net;
@@ -62,6 +63,44 @@ namespace ACMu.Host
             coordinator.SortAndBootstrap();
 
             RegisterTestCannon(services, registry);
+            RegisterAdShooting(services, registry);
+        }
+
+        private static void RegisterAdShooting(IAcmuServices services, IWeaponRegistry registry)
+        {
+            var spherePrefab = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            spherePrefab.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
+            spherePrefab.SetActive(false);
+            UnityEngine.Object.DontDestroyOnLoad(spherePrefab);
+            var rb = spherePrefab.AddComponent<Rigidbody>();
+            rb.mass = 0.4f;
+            rb.drag = 0f;
+            rb.angularDrag = 5f;
+
+            try
+            {
+                services.Projectiles.RegisterProjectile(
+                    AdShootingWeapon.SharedProjectileKey, spherePrefab, 32);
+            }
+            catch (Exception ex)
+            {
+                services.Log.Error("[ACMu] Bootstrap: RegisterProjectile AdShooting failed: " + ex.Message);
+            }
+
+            try
+            {
+                registry.Register<AdShootingModule, AdShootingHostBehaviour>(new WeaponRegistration
+                {
+                    ModuleName = "AdShootingProp",
+                    MultiplayerCompatible = true,
+                    WeaponFactory = () => new AdShootingWeapon()
+                });
+                services.Log.Info("[ACMu] AdShootingProp registered");
+            }
+            catch (Exception ex)
+            {
+                services.Log.Error("[ACMu] Bootstrap: Register AdShooting failed: " + ex.Message);
+            }
         }
 
         private static void RegisterTestCannon(IAcmuServices services, IWeaponRegistry registry)
