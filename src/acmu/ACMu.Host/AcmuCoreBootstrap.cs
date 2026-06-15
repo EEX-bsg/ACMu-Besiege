@@ -62,6 +62,9 @@ namespace ACMu.Host
 
             coordinator.SortAndBootstrap();
 
+            var effectLoader = go.AddComponent<EffectBundleAdapter>();
+            EffectRegistry.SetLoader(effectLoader.TryGetPrefab);
+
             RegisterTestCannon(services, registry);
             RegisterAdShooting(services, registry);
         }

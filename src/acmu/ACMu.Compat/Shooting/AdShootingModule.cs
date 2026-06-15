@@ -62,5 +62,17 @@ namespace ACMu.Compat.Shooting
 
         [XmlElement("PoolSize")]
         public int PoolSize = 10;
+
+        [XmlElement("ExplodeEffect")]
+        public string ExplodeEffect = "";
+
+        [XmlElement("ShotFlashEffect")]
+        public string ShotFlashEffect = "";
+
+        [XmlElement("TrailEffect")]
+        public string TrailEffect = "";
+
+        [XmlElement("BulletEffect")]
+        public string BulletEffect = "";
     }
 }

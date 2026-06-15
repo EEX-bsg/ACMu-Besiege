@@ -14,6 +14,8 @@ namespace ACMu.Compat.Shooting
         private bool  _projectilesExplode;
         private float _explodePower;
         private float _explodeUpPower;
+        private string _explodeEffectName;
+        private string _shotFlashEffectName;
 
         protected override void OnAttached()
         {
@@ -27,9 +29,11 @@ namespace ACMu.Compat.Shooting
             AdShootingModule m = LoadingModule;
             if (m == null) return;
 
-            _projectilesExplode = m.ProjectilesExplode;
-            _explodePower       = m.ExplodePower;
-            _explodeUpPower     = m.ExplodeUpPower;
+            _projectilesExplode  = m.ProjectilesExplode;
+            _explodePower        = m.ExplodePower;
+            _explodeUpPower      = m.ExplodeUpPower;
+            _explodeEffectName   = m.ExplodeEffect;
+            _shotFlashEffectName = m.ShotFlashEffect;
 
             Host.BaseSpec.Damage          = m.Shooting.EntityDamage;
             Host.BaseSpec.ExplosionRadius = m.ProjectilesExplode ? m.ExplodeRadius : 0f;
@@ -64,6 +68,8 @@ namespace ACMu.Compat.Shooting
             float rateOfFire;
             if (Host.Block.TryGetSlider(AdShootingModule.RateOfFireSliderName, out rateOfFire))
                 Host.BaseSpec.FireIntervalSeconds = rateOfFire;
+
+            EffectRegistry.Spawn(_shotFlashEffectName, Host.MuzzlePosition, Host.MuzzleRotation);
         }
 
         protected override void OnExplosion(ImpactContext context)
@@ -83,24 +89,7 @@ namespace ACMu.Compat.Shooting
                     rb.AddExplosionForce(scaledPower, context.Position, context.ExplosionRadius, scaledUpPower);
             }
 
-            DebugExplosionSphere(context.Position, context.ExplosionRadius);
-        }
-
-        // ---- デバッグ用一時ビジュアル(後で削除) ----
-        private static void DebugExplosionSphere(Vector3 pos, float radius)
-        {
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sphere.transform.position   = pos;
-            sphere.transform.localScale = Vector3.one * radius * 2f;
-
-            var r = sphere.GetComponent<Renderer>();
-            if (r != null) r.material.color = new Color(1f, 0.35f, 0f);
-
-            // 衝突しないように Collider を除去
-            var col = sphere.GetComponent<Collider>();
-            if (col != null) Object.Destroy(col);
-
-            Object.Destroy(sphere, 0.3f);
+            EffectRegistry.Spawn(_explodeEffectName, context.Position, Quaternion.identity);
         }
     }
 }
