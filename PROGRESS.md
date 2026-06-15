@@ -176,6 +176,10 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 
 ---
 
+**実機確認済み(2026-06-15)**: ホスト・クライアント双方で弾が見える。残留弾なし。
+
+---
+
 ## 次のタスク: M5 (未着手)
 
 > M4 完了。次は Compat 第1弾(旧ACM互換)。
