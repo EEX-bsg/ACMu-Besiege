@@ -6,12 +6,13 @@ using UnityEngine;
 namespace ACMu.Adapter
 {
     // Mod.xml <Resources> に下記名称でバンドルを宣言する必要がある:
-    //   <AssetBundle name="acmu_effects"     path="assets/acmu_effects" />
-    //   <AssetBundle name="acmu_effects_mac" path="assets/acmu_effects_mac" />
+    //   <AssetBundle name="acmu_effects"    path="assets/acmu_effects" />
+    //   <AssetBundle name="acmu_effectsMac" path="assets/acmu_effectsMac" />
+    // ACM 互換命名規則: Windows名 + "Mac" = Mac/Unix 用バンドル名
     public class EffectBundleAdapter : MonoBehaviour
     {
         private const string WinBundleResourceName = "acmu_effects";
-        private const string MacBundleResourceName = "acmu_effects_mac";
+        private const string MacBundleResourceName = WinBundleResourceName + "Mac";
 
         private ModAssetBundle _bundle;
         private bool _loaded;
@@ -42,9 +43,9 @@ namespace ACMu.Adapter
         private void LoadBundle()
         {
             _loaded = true;
-            string bundleName = (Application.platform == RuntimePlatform.OSXPlayer)
-                ? MacBundleResourceName
-                : WinBundleResourceName;
+            bool isMacOrUnix = Application.platform == RuntimePlatform.OSXPlayer
+                            || Application.platform == RuntimePlatform.LinuxPlayer;
+            string bundleName = isMacOrUnix ? MacBundleResourceName : WinBundleResourceName;
             try
             {
                 _bundle = ModResource.GetAssetBundle(bundleName);
