@@ -5,7 +5,7 @@ using Modding.Serialization;
 namespace ACMu.Compat.Shooting
 {
     [XmlRoot("AdShootingProp")]
-    public class AdShootingModule : BlockModule
+    public class OldCannonModule : BlockModule
     {
         internal const string FireKeyName           = "fire";
         internal const string PowerSliderName       = "power";
@@ -64,7 +64,7 @@ namespace ACMu.Compat.Shooting
         public int DefaultAmmo = 10;
 
         [XmlElement("PoolSize")]
-        public int PoolSize = 10;
+        public int PoolSize = 100;
 
         [XmlElement("ExplodeEffect")]
         public string ExplodeEffect = "";

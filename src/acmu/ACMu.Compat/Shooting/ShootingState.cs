@@ -12,5 +12,11 @@ namespace ACMu.Compat.Shooting
         [XmlElement("BlockDamage")]   public float BlockDamage  = 1f;
         [XmlElement("Attaches")]      public bool  Attaches     = false;
         [XmlElement("CollisionTypeS")] public string CollisionTypeS = "ContinuousDynamic";
+
+        /// <summary>弾頭メッシュ名。ModResource(Mod.xml に登録)を優先参照し、なければ AssetBundle から取得。<Mesh name="cannon_ball" /> 形式。省略なら既定球体。</summary>
+        [XmlElement("Mesh")]    public AssetBundleNameRef Mesh    = new AssetBundleNameRef();
+
+        /// <summary>弾頭テクスチャ名。ModResource(Mod.xml に登録)を優先参照し、なければ AssetBundle から取得。<Texture name="cannon_tex" /> 形式。省略なら既定マテリアル。</summary>
+        [XmlElement("Texture")] public AssetBundleNameRef Texture = new AssetBundleNameRef();
     }
 }

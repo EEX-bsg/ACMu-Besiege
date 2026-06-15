@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace ACMu.Compat.Shooting
 {
-    public sealed class AdShootingHostBehaviour : WeaponHostBehaviour<AdShootingModule>
+    public sealed class OldCannonHostBehaviour : WeaponHostBehaviour<OldCannonModule>
     {
         private CollisionDetectionMode _collisionMode = CollisionDetectionMode.ContinuousDynamic;
 
@@ -17,7 +17,7 @@ namespace ACMu.Compat.Shooting
         {
             get
             {
-                AdShootingModule m = Module;
+                OldCannonModule m = Module;
                 if (m == null || m.ProjectileStart == null) return transform.position;
                 return transform.position + transform.rotation * m.ProjectileStart.ToPosition();
             }
@@ -27,7 +27,7 @@ namespace ACMu.Compat.Shooting
         {
             get
             {
-                AdShootingModule m = Module;
+                OldCannonModule m = Module;
                 if (m == null || m.ProjectileStart == null) return transform.rotation;
                 return transform.rotation * m.ProjectileStart.ToRotation();
             }
@@ -35,43 +35,33 @@ namespace ACMu.Compat.Shooting
 
         public override void OnSimulateStart()
         {
-            AdShootingModule m = Module;
+            OldCannonModule m = Module;
             if (m != null && m.Shooting != null)
                 _collisionMode = ParseCollisionMode(m.Shooting.CollisionTypeS);
 
             if (Projectiles != null)
-            {
-                Projectiles.Spawned   += ApplyProjectileSetup;
                 Projectiles.Despawned += OnProjectileDespawned;
-            }
 
-            AdShootingWeapon.LoadingModule = m;
+            OldCannonWeapon.LoadingModule = m;
             base.OnSimulateStart();
-            AdShootingWeapon.LoadingModule = null;
+            OldCannonWeapon.LoadingModule = null;
         }
 
         public override void OnSimulateStop()
         {
             if (Projectiles != null)
-            {
-                Projectiles.Spawned   -= ApplyProjectileSetup;
                 Projectiles.Despawned -= OnProjectileDespawned;
-            }
 
-            // シミュ終了時に追跡中のエフェクトを破棄
-            foreach (var kvp in _trailGos)
-                if (kvp.Value != null) Object.Destroy(kvp.Value);
             _trailGos.Clear();
-
-            foreach (var kvp in _bulletGos)
-                if (kvp.Value != null) Object.Destroy(kvp.Value);
             _bulletGos.Clear();
+            EffectRegistry.ReturnAll();
 
             base.OnSimulateStop();
         }
 
-        // Spawned ハンドラ: 衝突判定モード + トレイル/弾体エフェクト設定
-        private void ApplyProjectileSetup(ProjectileHandle handle)
+        // OldCannonWeapon.OnAfterFire から呼ばれる。
+        // このホストが所有する弾体のみを受け取るため、複数ブロック配置でも重複しない。
+        internal void AttachProjectileEffects(ProjectileHandle handle)
         {
             GameObject projGo;
             if (!Projectiles.TryGetGameObject(handle, out projGo)) return;
@@ -79,49 +69,88 @@ namespace ACMu.Compat.Shooting
             var rb = projGo.GetComponent<Rigidbody>();
             if (rb != null) rb.collisionDetectionMode = _collisionMode;
 
-            AdShootingModule m = Module;
+            OldCannonModule m = Module;
             if (m == null) return;
 
-            string bundle = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+            string bundle   = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+            int    poolSize = m.PoolSize;
+
+            // 弾体メッシュ/テクスチャ: 指定があれば球体デフォルトを上書き。プール返却時に自動復元。
+            if (m.Shooting != null)
+            {
+                string meshName    = m.Shooting.Mesh    != null ? m.Shooting.Mesh.Name    : "";
+                string textureName = m.Shooting.Texture != null ? m.Shooting.Texture.Name : "";
+                Mesh     mesh = EffectRegistry.LoadMesh(bundle, meshName);
+                Material mat  = EffectRegistry.LoadMaterial(bundle, textureName);
+                if (mesh != null || mat != null)
+                {
+                    var restorer = projGo.GetComponent<ProjectileMeshRestorer>();
+                    if (restorer == null) restorer = projGo.AddComponent<ProjectileMeshRestorer>();
+                    restorer.Apply(mesh, mat);
+                }
+            }
 
             if (!string.IsNullOrEmpty(m.TrailEffect) && m.TrailEffect != "none")
             {
-                var trail = EffectRegistry.Spawn(bundle, m.TrailEffect, projGo.transform.position, projGo.transform.rotation);
+                var trail = EffectRegistry.Spawn(bundle, m.TrailEffect, projGo.transform.position, projGo.transform.rotation, poolSize, false);
                 if (trail != null)
                 {
                     trail.transform.SetParent(projGo.transform, false);
+                    trail.transform.localPosition = Vector3.zero;
+                    trail.transform.localRotation = Quaternion.identity;
                     _trailGos[handle.Id] = trail;
                 }
             }
 
             if (!string.IsNullOrEmpty(m.BulletEffect) && m.BulletEffect != "none")
             {
-                var bullet = EffectRegistry.Spawn(bundle, m.BulletEffect, projGo.transform.position, projGo.transform.rotation);
+                var bullet = EffectRegistry.Spawn(bundle, m.BulletEffect, projGo.transform.position, projGo.transform.rotation, poolSize, false);
                 if (bullet != null)
                 {
                     bullet.transform.SetParent(projGo.transform, false);
+                    bullet.transform.localPosition = Vector3.zero;
+                    bullet.transform.localRotation = Quaternion.identity;
                     _bulletGos[handle.Id] = bullet;
                 }
             }
         }
 
-        // Despawned ハンドラ: エフェクトを切り離してフェードアウトさせる
+        // Despawned ハンドラ
         // ※ Despawned は SetActive(false) 後に発火するため TryGetGameObject は使えない
         private void OnProjectileDespawned(ProjectileHandle handle, DespawnReason reason)
         {
-            DetachAndFade(handle.Id, _trailGos);
-            DetachAndFade(handle.Id, _bulletGos);
+            OldCannonModule m = Module;
+            string bundle      = m != null && m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+
+            GameObject trailGo;
+            if (_trailGos.TryGetValue(handle.Id, out trailGo))
+            {
+                _trailGos.Remove(handle.Id);
+                DetachAndFade(trailGo);
+            }
+
+            GameObject bulletGo;
+            if (_bulletGos.TryGetValue(handle.Id, out bulletGo))
+            {
+                _bulletGos.Remove(handle.Id);
+                if (reason == DespawnReason.Impact)
+                {
+                    string bulletEffect = m != null ? m.BulletEffect : "";
+                    EffectRegistry.Return(bundle, bulletEffect, bulletGo);
+                }
+                else
+                {
+                    DetachAndFade(bulletGo);
+                }
+            }
         }
 
-        private static void DetachAndFade(int handleId, Dictionary<int, GameObject> dict)
+        private static void DetachAndFade(GameObject go)
         {
-            GameObject go;
-            if (!dict.TryGetValue(handleId, out go)) return;
-            dict.Remove(handleId);
             if (go == null) return;
             go.transform.SetParent(null, true);
             go.SetActive(true);
-            Object.Destroy(go, 5f);
+            EffectRegistry.Fade(go);
         }
 
         private static CollisionDetectionMode ParseCollisionMode(string s)

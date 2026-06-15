@@ -124,7 +124,10 @@ A newly created mod. <!-- FIX: Insert a short description here. -->
 	<Resources>
 		<Mesh name="TestCannon" path="TestCannon.obj" />
 		<Mesh name="Sphere" path="Sphere.obj" />
+		<Mesh name="100mmShell" path="100mmShell.obj" />
 		<Texture name="metal" path="metal.png" />
+        <AssetBundle name="myasset" path="assets/tank_effect" />
+        <AssetBundle name="myassetMac" path="assetsMac/tank_effectmac" />
 
         <!--<Texture name="icon" path="icon.png" />-->
         <!--<Texture name="thumbnail" path="thumbnail.png" />-->

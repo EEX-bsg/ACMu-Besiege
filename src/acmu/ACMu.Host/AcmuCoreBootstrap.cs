@@ -62,8 +62,17 @@ namespace ACMu.Host
 
             coordinator.SortAndBootstrap();
 
+            DamageRegistry.SetApplyFn(DamageApplierAdapter.ApplyDamage);
+
             var effectLoader = go.AddComponent<EffectBundleAdapter>();
-            EffectRegistry.SetLoader(effectLoader.TryGetPrefab);
+            EffectRegistry.SetFunctions(
+                effectLoader.Rent,
+                effectLoader.Return,
+                effectLoader.ReturnAll,
+                effectLoader.BeginLifetime,
+                effectLoader.Fade,
+                effectLoader.LoadMeshAsset,
+                effectLoader.LoadMaterialFromTexture);
 
             RegisterTestCannon(services, registry);
             RegisterAdShooting(services, registry);
@@ -83,7 +92,7 @@ namespace ACMu.Host
             try
             {
                 services.Projectiles.RegisterProjectile(
-                    AdShootingWeapon.SharedProjectileKey, spherePrefab, 32);
+                    OldCannonWeapon.SharedProjectileKey, spherePrefab, 32);
             }
             catch (Exception ex)
             {
@@ -92,11 +101,11 @@ namespace ACMu.Host
 
             try
             {
-                registry.Register<AdShootingModule, AdShootingHostBehaviour>(new WeaponRegistration
+                registry.Register<OldCannonModule, OldCannonHostBehaviour>(new WeaponRegistration
                 {
                     ModuleName = "AdShootingProp",
                     MultiplayerCompatible = true,
-                    WeaponFactory = () => new AdShootingWeapon()
+                    WeaponFactory = () => new OldCannonWeapon()
                 });
                 services.Log.Info("[ACMu] AdShootingProp registered");
             }

@@ -39,6 +39,8 @@ namespace ACMu.Weapons
         private int _epoch;
         private ILog _log;
         private IGameSessionInfo _session;
+        // 全弾体GOの格納先。ACMUcore の子として生成されるため DontDestroyOnLoad 不要。
+        private Transform _projectilePoolRoot;
 
         internal event Action<ProjectileHandle, Collision> ImpactOccurred;
 
@@ -51,6 +53,10 @@ namespace ACMu.Weapons
         {
             _log     = log;
             _session = session;
+
+            var poolGo = new GameObject("[ACMu] ProjectilePool");
+            poolGo.transform.SetParent(transform, false);
+            _projectilePoolRoot = poolGo.transform;
         }
 
         public void OnModLoad() { }
@@ -311,7 +317,7 @@ namespace ACMu.Weapons
         private GameObject CreateProjectileGo(string key, GameObject prefab)
         {
             var go = Instantiate(prefab);
-            UnityEngine.Object.DontDestroyOnLoad(go);
+            go.transform.SetParent(_projectilePoolRoot, false);
             var body = go.GetComponent<ProjectileBody>();
             if (body == null) body = go.AddComponent<ProjectileBody>();
             return go;

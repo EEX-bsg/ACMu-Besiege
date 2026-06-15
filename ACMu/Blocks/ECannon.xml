@@ -23,7 +23,13 @@
                 <EntityDamage>40</EntityDamage>
                 <BlockDamage>10000.0</BlockDamage>
                 <Attaches>true</Attaches>
-                <CollisionTypeS>ContinuousDynamic</CollisionTypeS>
+                <CollisionTypes>ContinuousDynamic</CollisionTypes>
+                <Mesh name="100mmShell">
+                    <Position x="0.0" y="0.0" z="-0.1" />
+                    <Rotation x="0.0" y="-90.0" z="0.0" />
+                    <Scale x="0.75" y="0.75" z="0.75" />
+                </Mesh>
+                <Texture name="metal" />
             </ShootingState>
 
             <FireKey key="fire" />
@@ -48,6 +54,12 @@
             <RandomDiffusion>0.007</RandomDiffusion>
             <FuseDelayTime>0.0</FuseDelayTime>
             <RandomFuseInterval>0.0</RandomFuseInterval>
+
+            <AssetBundleName name="myasset" />
+            <ExplodeEffect>APFSDShit</ExplodeEffect>
+            <ShotFlashEffect>ShotEffectMB</ShotFlashEffect>
+            <TrailEffect>newBulletTrailWV100</TrailEffect>
+            <BulletEffect>bulleteffect</BulletEffect>
 
             <DefaultAmmo>20</DefaultAmmo>
             <PoolSize>50</PoolSize>
