@@ -16,6 +16,7 @@ namespace ACMu.Compat.Shooting
 
         // OnAttached でキャッシュ
         private bool   _projectilesExplode;
+        private bool   _projectilesDespawnImmediately;
         private float  _explodePower;
         private float  _explodeUpPower;
         private string _bundleName;
@@ -50,15 +51,16 @@ namespace ACMu.Compat.Shooting
             Host.BaseSpec.ProjectileKey             = SharedProjectileKey;
             Host.BaseSpec.MuzzleVelocity            = 250f;
             Host.BaseSpec.FireIntervalSeconds       = 0.37f;
-            Host.BaseSpec.ProjectileLifetimeSeconds = 5f;
+            Host.BaseSpec.ProjectileLifetimeSeconds = 20f;
             Host.BaseSpec.Damage                    = 0f;
             Host.BaseSpec.ExplosionRadius           = 0f;
 
             OldCannonModule m = LoadingModule;
             if (m == null) return;
 
-            _projectilesExplode  = m.ProjectilesExplode;
-            _explodePower        = m.ExplodePower;
+            _projectilesExplode           = m.ProjectilesExplode;
+            _projectilesDespawnImmediately = m.ProjectilesDespawnImmediately;
+            _explodePower                 = m.ExplodePower;
             _explodeUpPower      = m.ExplodeUpPower;
             _bundleName          = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
             _explodeEffectName   = m.ExplodeEffect;
@@ -227,6 +229,11 @@ namespace ACMu.Compat.Shooting
 
             // 着弾音
             EffectRegistry.PlaySounds(_hitSoundNames, context.Position);
+
+            // ProjectilesDespawnImmediately=true のときのみ着弾で消える。
+            // false の場合はフューズ / 寿命タイムアウトで消える(原ACM互換)。
+            if (_projectilesDespawnImmediately)
+                Host.Projectiles.Despawn(context.Projectile, DespawnReason.Impact);
         }
 
         protected override void OnExplosion(ImpactContext context)

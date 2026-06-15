@@ -162,11 +162,12 @@ namespace ACMu.Weapons
             return handle;
         }
 
+        // 衝突通知のみ。Despawn は武装側の OnImpact が責任を持つ。
+        // ProjectilesDespawnImmediately=false の弾体はここで消えず、フューズ/寿命で消える。
         internal void HandleImpact(ProjectileHandle handle, Collision collision)
         {
             if (!_active.ContainsKey(handle.Id)) return;
             if (ImpactOccurred != null) ImpactOccurred(handle, collision);
-            Despawn(handle, DespawnReason.Impact);
         }
 
         public void Despawn(ProjectileHandle handle, DespawnReason reason)
