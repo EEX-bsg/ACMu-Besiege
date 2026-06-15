@@ -1,4 +1,5 @@
 <Block>
+    <Debug>true</Debug>
     <ID>2</ID>
     <Name>75mmL48HE (ACMu)</Name>
     <Mass>1.0</Mass>
@@ -6,8 +7,8 @@
 
     <ModuleMapperTypes>
         <Key    displayName="Shot"         key="fire"         default="C" />
-        <Slider displayName="Power"        key="power"        min="250"  max="250"  default="250"  unclamped="false" />
-        <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.37" max="0.37" default="0.37" unclamped="false" />
+        <Slider displayName="Power"        key="power"        min="50"   max="550"  default="250"  unclamped="false" />
+        <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.10" max="1.00" default="0.37" unclamped="false" />
         <Toggle displayName="Hold To Shoot" key="hold-to-shoot" default="true" />
     </ModuleMapperTypes>
 
@@ -53,6 +54,19 @@
 
         </AdShootingProp>
     </Modules>
+
+    <Mesh name="TestCannon">
+        <Position x="0.0" y="0.4" z="0.5" />
+        <Rotation x="0.0" y="90.0" z="90.0" />
+        <Scale x="2.0" y="2.0" z="2.0" />
+    </Mesh>
+    <Texture name="metal" />
+
+    <Icon>
+        <Position x="0.2" y="0.2" z="0.0" />
+        <Rotation x="60.0" y="30.0" z="30.0" />
+        <Scale x="0.25" y="0.25" z="0.25" />
+    </Icon>
 
     <Colliders>
         <BoxCollider>

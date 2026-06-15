@@ -71,13 +71,16 @@ namespace ACMu.Compat.Shooting
             if (!_projectilesExplode || context.ExplosionRadius <= 0f) return;
             if (context.SuppressDefaultExplosion) return;
 
-            // 範囲内の Rigidbody に爆発力を加える(純 Unity API、Adapter 不要)
+            // ACM 原典の変換: power × 2, upPower × 0.25 (explosion-mechanics.md §2)
+            float scaledPower   = _explodePower   * 2f;
+            float scaledUpPower = _explodeUpPower * 0.25f;
+
             Collider[] hits = Physics.OverlapSphere(context.Position, context.ExplosionRadius);
             foreach (Collider col in hits)
             {
                 Rigidbody rb = col.attachedRigidbody;
                 if (rb != null)
-                    rb.AddExplosionForce(_explodePower, context.Position, context.ExplosionRadius, _explodeUpPower);
+                    rb.AddExplosionForce(scaledPower, context.Position, context.ExplosionRadius, scaledUpPower);
             }
 
             DebugExplosionSphere(context.Position, context.ExplosionRadius);
