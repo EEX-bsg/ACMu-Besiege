@@ -24,6 +24,9 @@ namespace ACMu.Compat.Shooting
         [XmlElement("RateOfFireSlider")]
         public MSliderReference RateOfFireSlider;
 
+        [XmlElement("AssetBundleName")]
+        public AssetBundleNameRef AssetBundleName = new AssetBundleNameRef();
+
         [XmlElement("ProjectileStart")]
         public XmlTransform ProjectileStart = new XmlTransform();
 

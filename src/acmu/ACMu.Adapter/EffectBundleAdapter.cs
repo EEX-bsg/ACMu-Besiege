@@ -5,33 +5,36 @@ using UnityEngine;
 
 namespace ACMu.Adapter
 {
-    // Mod.xml <Resources> に下記名称でバンドルを宣言する必要がある:
-    //   <AssetBundle name="acmu_effects"    path="assets/acmu_effects" />
-    //   <AssetBundle name="acmu_effectsMac" path="assets/acmu_effectsMac" />
-    // ACM 互換命名規則: Windows名 + "Mac" = Mac/Unix 用バンドル名
+    // エフェクトバンドルの lazy load を担当。
+    // Mod.xml <Resources> に使用バンドルを宣言する:
+    //   <AssetBundle name="tank_effect"    path="assets/tank_effect" />
+    //   <AssetBundle name="tank_effectMac" path="assets/tank_effectMac" />
+    // ACM 互換命名規則: Mac/Unix では resourceName + "Mac" のリソースを使用する。
     public class EffectBundleAdapter : MonoBehaviour
     {
-        private const string WinBundleResourceName = "acmu_effects";
-        private const string MacBundleResourceName = WinBundleResourceName + "Mac";
+        // bundleResourceName(Win) -> ModAssetBundle (ロード済み or null)
+        private readonly Dictionary<string, ModAssetBundle> _bundles = new Dictionary<string, ModAssetBundle>();
 
-        private ModAssetBundle _bundle;
-        private bool _loaded;
+        // "bundleName/prefabName" -> prefab GO
         private readonly Dictionary<string, GameObject> _cache = new Dictionary<string, GameObject>();
 
-        // EffectRegistry.SetLoader に渡す。lazy load: 初回 TryGetPrefab 呼び出し時にバンドルをロード。
-        internal GameObject TryGetPrefab(string name)
+        // EffectRegistry.SetLoader に渡す。(bundleResourceName, prefabName) -> GO
+        internal GameObject TryGetPrefab(string bundleName, string prefabName)
         {
-            if (string.IsNullOrEmpty(name) || name == "none") return null;
-            if (!_loaded) LoadBundle();
-            if (_bundle == null) return null;
+            if (string.IsNullOrEmpty(bundleName) || string.IsNullOrEmpty(prefabName) || prefabName == "none")
+                return null;
 
+            string cacheKey = bundleName + "/" + prefabName;
             GameObject cached;
-            if (_cache.TryGetValue(name, out cached)) return cached;
+            if (_cache.TryGetValue(cacheKey, out cached)) return cached;
+
+            var bundle = GetOrLoadBundle(bundleName);
+            if (bundle == null) return null;
 
             try
             {
-                var go = _bundle.LoadAsset<GameObject>(name);
-                if (go != null) _cache[name] = go;
+                var go = bundle.LoadAsset<GameObject>(prefabName);
+                if (go != null) _cache[cacheKey] = go;
                 return go;
             }
             catch
@@ -40,20 +43,28 @@ namespace ACMu.Adapter
             }
         }
 
-        private void LoadBundle()
+        // Win用リソース名を受け取り、Mac/Unix では自動的に + "Mac" で読む
+        private ModAssetBundle GetOrLoadBundle(string resourceName)
         {
-            _loaded = true;
+            ModAssetBundle bundle;
+            if (_bundles.TryGetValue(resourceName, out bundle)) return bundle;
+
             bool isMacOrUnix = Application.platform == RuntimePlatform.OSXPlayer
                             || Application.platform == RuntimePlatform.LinuxPlayer;
-            string bundleName = isMacOrUnix ? MacBundleResourceName : WinBundleResourceName;
+            string loadName = isMacOrUnix ? resourceName + "Mac" : resourceName;
+
             try
             {
-                _bundle = ModResource.GetAssetBundle(bundleName);
+                bundle = ModResource.GetAssetBundle(loadName);
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ACMu] EffectBundleAdapter: bundle load failed '" + bundleName + "': " + ex.Message);
+                Debug.LogError("[ACMu] EffectBundleAdapter: bundle load failed '" + loadName + "': " + ex.Message);
+                bundle = null;
             }
+
+            _bundles[resourceName] = bundle;
+            return bundle;
         }
     }
 }

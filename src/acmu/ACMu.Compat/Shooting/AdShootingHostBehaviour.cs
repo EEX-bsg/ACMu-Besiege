@@ -82,9 +82,11 @@ namespace ACMu.Compat.Shooting
             AdShootingModule m = Module;
             if (m == null) return;
 
+            string bundle = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
+
             if (!string.IsNullOrEmpty(m.TrailEffect) && m.TrailEffect != "none")
             {
-                var trail = EffectRegistry.Spawn(m.TrailEffect, projGo.transform.position, projGo.transform.rotation);
+                var trail = EffectRegistry.Spawn(bundle, m.TrailEffect, projGo.transform.position, projGo.transform.rotation);
                 if (trail != null)
                 {
                     trail.transform.SetParent(projGo.transform, false);
@@ -94,7 +96,7 @@ namespace ACMu.Compat.Shooting
 
             if (!string.IsNullOrEmpty(m.BulletEffect) && m.BulletEffect != "none")
             {
-                var bullet = EffectRegistry.Spawn(m.BulletEffect, projGo.transform.position, projGo.transform.rotation);
+                var bullet = EffectRegistry.Spawn(bundle, m.BulletEffect, projGo.transform.position, projGo.transform.rotation);
                 if (bullet != null)
                 {
                     bullet.transform.SetParent(projGo.transform, false);

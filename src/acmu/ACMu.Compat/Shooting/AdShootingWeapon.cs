@@ -14,6 +14,7 @@ namespace ACMu.Compat.Shooting
         private bool  _projectilesExplode;
         private float _explodePower;
         private float _explodeUpPower;
+        private string _bundleName;
         private string _explodeEffectName;
         private string _shotFlashEffectName;
 
@@ -32,6 +33,7 @@ namespace ACMu.Compat.Shooting
             _projectilesExplode  = m.ProjectilesExplode;
             _explodePower        = m.ExplodePower;
             _explodeUpPower      = m.ExplodeUpPower;
+            _bundleName          = m.AssetBundleName != null ? m.AssetBundleName.Name : "";
             _explodeEffectName   = m.ExplodeEffect;
             _shotFlashEffectName = m.ShotFlashEffect;
 
@@ -69,7 +71,7 @@ namespace ACMu.Compat.Shooting
             if (Host.Block.TryGetSlider(AdShootingModule.RateOfFireSliderName, out rateOfFire))
                 Host.BaseSpec.FireIntervalSeconds = rateOfFire;
 
-            EffectRegistry.Spawn(_shotFlashEffectName, Host.MuzzlePosition, Host.MuzzleRotation);
+            EffectRegistry.Spawn(_bundleName, _shotFlashEffectName, Host.MuzzlePosition, Host.MuzzleRotation);
         }
 
         protected override void OnExplosion(ImpactContext context)
@@ -89,7 +91,7 @@ namespace ACMu.Compat.Shooting
                     rb.AddExplosionForce(scaledPower, context.Position, context.ExplosionRadius, scaledUpPower);
             }
 
-            EffectRegistry.Spawn(_explodeEffectName, context.Position, Quaternion.identity);
+            EffectRegistry.Spawn(_bundleName, _explodeEffectName, context.Position, Quaternion.identity);
         }
     }
 }

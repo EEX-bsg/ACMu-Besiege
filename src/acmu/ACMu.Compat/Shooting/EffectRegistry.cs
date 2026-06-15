@@ -4,14 +4,14 @@ using UnityEngine;
 
 namespace ACMu.Compat.Shooting
 {
-    // BootstrapがSetLoaderでAdapterのローダーを注入する。
-    // エフェクトPrefabはLazyLoadされ、初回Spawn時にバンドルから取得する。
+    // Bootstrap が SetLoader で (bundleName, prefabName) -> GO のローダーを注入する。
+    // キャッシュキーは "bundleName/prefabName"。
     internal static class EffectRegistry
     {
         private static readonly Dictionary<string, GameObject> _cache = new Dictionary<string, GameObject>();
-        private static Func<string, GameObject> _loader;
+        private static Func<string, string, GameObject> _loader;
 
-        internal static void SetLoader(Func<string, GameObject> loader)
+        internal static void SetLoader(Func<string, string, GameObject> loader)
         {
             _loader = loader;
         }
@@ -22,23 +22,28 @@ namespace ACMu.Compat.Shooting
             _loader = null;
         }
 
-        // nameが空/"none"の場合は何もせずnullを返す
-        internal static GameObject Spawn(string name, Vector3 pos, Quaternion rot)
+        // bundleName が空 / effectName が空/"none" の場合は何もしない
+        internal static GameObject Spawn(string bundleName, string effectName, Vector3 pos, Quaternion rot)
         {
-            var prefab = TryGet(name);
+            var prefab = TryGet(bundleName, effectName);
             if (prefab == null) return null;
             return (GameObject)UnityEngine.Object.Instantiate(prefab, pos, rot);
         }
 
-        private static GameObject TryGet(string name)
+        private static GameObject TryGet(string bundleName, string effectName)
         {
-            if (string.IsNullOrEmpty(name) || name == "none") return null;
+            if (string.IsNullOrEmpty(bundleName) || string.IsNullOrEmpty(effectName) || effectName == "none")
+                return null;
+
+            string key = bundleName + "/" + effectName;
             GameObject prefab;
-            if (_cache.TryGetValue(name, out prefab)) return prefab;
+            if (_cache.TryGetValue(key, out prefab)) return prefab;
             if (_loader == null) return null;
-            try { prefab = _loader(name); }
+
+            try { prefab = _loader(bundleName, effectName); }
             catch { return null; }
-            if (prefab != null) _cache[name] = prefab;
+
+            if (prefab != null) _cache[key] = prefab;
             return prefab;
         }
     }
