@@ -90,6 +90,7 @@ A newly created mod. <!-- FIX: Insert a short description here. -->
 		 The path attribute is relative to the location of this file. -->
 	<Blocks>
 		<Block path="Blocks/TestCannon.xml" />
+		<Block path="Blocks/ECannon.xml" />
 	</Blocks>
 	
 	<!-- Any entities (level objects) your mod adds to the game.

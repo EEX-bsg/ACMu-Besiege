@@ -1,0 +1,74 @@
+<Block>
+    <ID>2</ID>
+    <Name>75mmL48HE (ACMu)</Name>
+    <Mass>1.0</Mass>
+    <Fallback>Cannon</Fallback>
+
+    <ModuleMapperTypes>
+        <Key    displayName="Shot"         key="fire"         default="C" />
+        <Slider displayName="Power"        key="power"        min="250"  max="250"  default="250"  unclamped="false" />
+        <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.37" max="0.37" default="0.37" unclamped="false" />
+        <Toggle displayName="Hold To Shoot" key="hold-to-shoot" default="true" />
+    </ModuleMapperTypes>
+
+    <Modules>
+        <AdShootingProp modid="e2650bb4-7195-42a8-93c4-bdab66f5b571">
+
+            <ShootingState>
+                <Mass>0.6</Mass>
+                <Drag>0.0</Drag>
+                <AngularDrag>0.0</AngularDrag>
+                <IgnoreGravity>False</IgnoreGravity>
+                <EntityDamage>40</EntityDamage>
+                <BlockDamage>10000.0</BlockDamage>
+                <Attaches>true</Attaches>
+                <CollisionTypeS>ContinuousDynamic</CollisionTypeS>
+            </ShootingState>
+
+            <FireKey key="fire" />
+            <PowerSlider key="power" />
+            <RateOfFireSlider key="rate-of-fire" />
+            <HoldToShootToggle key="hold-to-shoot" />
+
+            <ProjectileStart>
+                <Position x="0.0" y="-8.5" z="0.5" />
+                <Rotation x="90.0" y="0.0" z="0.0" />
+                <Scale x="1.0" y="1.0" z="1.0" />
+            </ProjectileStart>
+
+            <ProjectilesExplode>true</ProjectilesExplode>
+            <ExplodeRadius>5.0</ExplodeRadius>
+            <ExplodePower>9000.0</ExplodePower>
+            <ExplodeUpPower>-4</ExplodeUpPower>
+            <ProjectilesDespawnImmediately>false</ProjectilesDespawnImmediately>
+
+            <RecoilMultiplier>0.8</RecoilMultiplier>
+            <RandomInterval>0.03</RandomInterval>
+            <RandomDiffusion>0.007</RandomDiffusion>
+            <FuseDelayTime>0.0</FuseDelayTime>
+            <RandomFuseInterval>0.0</RandomFuseInterval>
+
+            <DefaultAmmo>20</DefaultAmmo>
+            <PoolSize>50</PoolSize>
+
+        </AdShootingProp>
+    </Modules>
+
+    <Colliders>
+        <BoxCollider>
+            <Position x="0.0" y="0.0" z="0.5" />
+            <Rotation x="0.0" y="0.0" z="0.0" />
+            <Scale x="0.8" y="0.8" z="0.8" />
+        </BoxCollider>
+        <CapsuleCollider>
+            <Position x="0.0" y="-3.8" z="0.5" />
+            <Rotation x="90.0" y="90.0" z="90.0" />
+            <Capsule direction="Z" radius="0.24" height="7.5" />
+        </CapsuleCollider>
+    </Colliders>
+
+    <BasePoint hasAddingPoint="false">
+        <Stickiness enabled="true" radius="0.6" />
+        <Motion x="false" y="false" z="false" />
+    </BasePoint>
+</Block>
