@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using ACMu.Core.Game;
 using ACMu.Core.Weapons;
 using UnityEngine;
 
@@ -12,6 +13,8 @@ namespace ACMu.Weapons
         private readonly WeaponComponentBase _weapon;
         private readonly ProjectileService _projectileService;
         private readonly MonoBehaviour _coroutineRunner;
+        private readonly IGameSessionInfo _session;
+        private readonly ProjectileSyncTransport _projSync;
 
         private float _lastFireTime = float.NegativeInfinity;
         private readonly HashSet<int> _myHandles = new HashSet<int>();
@@ -20,12 +23,16 @@ namespace ACMu.Weapons
             IWeaponHost host,
             WeaponComponentBase weapon,
             ProjectileService projectileService,
-            MonoBehaviour coroutineRunner)
+            MonoBehaviour coroutineRunner,
+            IGameSessionInfo session,
+            ProjectileSyncTransport projSync)
         {
             _host = host;
             _weapon = weapon;
             _projectileService = projectileService;
             _coroutineRunner = coroutineRunner;
+            _session = session;
+            _projSync = projSync;
 
             if (_projectileService != null)
             {
@@ -84,19 +91,34 @@ namespace ACMu.Weapons
 
             if (context.Shot.ProjectileKey != null && _host.Projectiles != null)
             {
-                var request = new ProjectileSpawnRequest
+                // MP クライアントはホスト権威実行のため発射要求を送信
+                if (_session != null && _session.IsMultiplayer && !_session.IsHost && _projSync != null)
                 {
-                    ProjectileKey = context.Shot.ProjectileKey,
-                    Position = context.MuzzlePosition,
-                    Rotation = context.MuzzleRotation,
-                    Velocity = context.Direction * context.Shot.MuzzleVelocity,
-                    Owner = _host,
-                    Shot = context.Shot,
-                    Guidance = context.Guidance
-                };
-                handle = _host.Projectiles.Spawn(request);
-                if (handle.IsValid)
-                    _myHandles.Add(handle.Id);
+                    Vector3 vel = context.Direction * context.Shot.MuzzleVelocity;
+                    _projSync.SendFireRequest(
+                        context.Shot.ProjectileKey,
+                        context.MuzzlePosition,
+                        vel,
+                        context.Shot.ProjectileLifetimeSeconds,
+                        context.Shot.ExplosionRadius);
+                    // handle は Invalid のまま(プロキシはホスト→クライアント broadcast で受信)
+                }
+                else
+                {
+                    var request = new ProjectileSpawnRequest
+                    {
+                        ProjectileKey = context.Shot.ProjectileKey,
+                        Position = context.MuzzlePosition,
+                        Rotation = context.MuzzleRotation,
+                        Velocity = context.Direction * context.Shot.MuzzleVelocity,
+                        Owner = _host,
+                        Shot = context.Shot,
+                        Guidance = context.Guidance
+                    };
+                    handle = _host.Projectiles.Spawn(request);
+                    if (handle.IsValid)
+                        _myHandles.Add(handle.Id);
+                }
             }
 
             try { _weapon.NotifyAfterFire(context, handle); }

@@ -18,6 +18,7 @@ namespace ACMu.Weapons
         private WeaponSpec _baseSpec;
         private FirePipeline _pipeline;
         private ProjectileService _projectileService;
+        private ProjectileSyncTransport _projSync;
 
         // IWeaponHost
         public IBlockAccessor Block { get { return _block; } }
@@ -63,6 +64,7 @@ namespace ACMu.Weapons
                 return;
             }
             _services = pluginHost.Services;
+            _projSync = core.GetComponent<ProjectileSyncTransport>();
         }
 
         public override void OnSimulateStart()
@@ -100,7 +102,7 @@ namespace ACMu.Weapons
             }
 
             _projectileService = _services.Projectiles as ProjectileService;
-            _pipeline = new FirePipeline(this, _weapon, _projectileService, this);
+            _pipeline = new FirePipeline(this, _weapon, _projectileService, this, _services.Session, _projSync);
 
             try { _weapon.NotifySimulationStart(); }
             catch (Exception ex)

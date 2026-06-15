@@ -38,7 +38,10 @@ namespace ACMu.Host
             network.InitializeService(log, events, 1);
 
             var projectiles = go.AddComponent<ProjectileService>();
-            projectiles.InitializeService(log);
+            projectiles.InitializeService(log, session);
+
+            var projSync = go.AddComponent<ProjectileSyncTransport>();
+            projSync.InitializeService(log, session, network, projectiles);
 
             var registry = new WeaponRegistryImpl();
 
@@ -54,6 +57,7 @@ namespace ACMu.Host
             coordinator.AddParticipant(config);
             coordinator.AddParticipant(network);
             coordinator.AddParticipant(projectiles);
+            coordinator.AddParticipant(projSync);
 
             coordinator.SortAndBootstrap();
 

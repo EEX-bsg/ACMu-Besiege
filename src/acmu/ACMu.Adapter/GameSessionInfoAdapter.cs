@@ -24,7 +24,14 @@ namespace ACMu.Adapter
                 return StatMaster.isHosting || Modding.Game.IsSimulatingLocal; // MP: ホスト or ローカルシミュ中
             }
         }
-        public int LocalPlayerId { get { return 0; } }
+        public int LocalPlayerId
+        {
+            get
+            {
+                var p = Modding.Common.Player.GetLocalPlayer();
+                return p != null ? (int)p.NetworkId : 0;
+            }
+        }
         public float NetworkSendRate { get { return 20f; } }
 
         public void OnModLoad() { }

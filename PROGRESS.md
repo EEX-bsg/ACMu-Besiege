@@ -1,6 +1,6 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-14 (M2 完了)
+最終更新: 2026-06-15 (M4 完了)
 
 ---
 
@@ -137,9 +137,48 @@ git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
 
 ---
 
-## 次のタスク: M3 (未着手)
+### M3 ✅ — INetworkTransport 実装 (タグなし / commit fdd6c9e)
 
-> M2 完了。次は INetworkTransport 実装(M3)。M2 の実機確認項目を先に人間が検証すること。
+**ACMu.Net 層**:
+| ファイル | 実装内容 |
+|---|---|
+| `PacketWriterImpl.cs` | MemoryStream + BinaryWriter。Vector3d(double×3)、Quaternion(float×4)、UTF8文字列+長さ前置 |
+| `PacketReaderImpl.cs` | MemoryStream + BinaryReader |
+| `ModNetTransport.cs` | INetworkTransport 実装。Reliable/Unreliable 各1メッセージ型、ペイロード先頭1バイト=channelId で多重化 |
+
+**Host 配線変更**: NullNetworkTransport → ModNetTransport に差し替え。ACMu内部チャネル0でバージョンhello交換。
+
+**注意**: M3 完了後に `ConsoleLog を Debug.Log 併用に変更・ex.ToString禁止違反根絶・Bootstrap try-catch 追加` (commit 028fd95)、`エコーテスト用コードを削除` (commit 899d77e) を実施。
+
+---
+
+### M4 ✅ — 武装の MP 化(スポーン同期) (警告0エラー0確認済み)
+
+**ACMu.Weapons 層** (新規・変更):
+| ファイル | 実装内容 |
+|---|---|
+| `ProxyProjectile.cs` | クライアント側プロキシ弾 MonoBehaviour。速度外挿+lerp平滑補正。物理なし(Transform 駆動のみ) |
+| `ProjectileSyncTransport.cs` | ホスト→クライアント同期(Spawn/Despawn/StateSnapshot/AliveList)＋クライアント→ホスト発射要求(ChFireReq)。InitOrder=350 |
+| `ProjectileService.cs` | プロキシ受信 API 追加(ReceiveProxySpawn/Despawn/Snapshot/ReconcileAliveList)。ライフタイムコルーチンもプロキシ対応 |
+| `FirePipeline.cs` | MP クライアント時 `_projSync.SendFireRequest()` で発射要求を送信(ローカルスポーン不可)。SP/ホストは従来通りローカルスポーン |
+| `WeaponHostBehaviour.cs` | SafeAwake で `ProjectileSyncTransport` を取得し FirePipeline に渡す |
+
+**Adapter 変更**:
+| ファイル | 変更内容 |
+|---|---|
+| `GameSessionInfoAdapter.cs` | IsSimulating に `Modding.Game.IsSimulatingLocal` を追加(観戦クライアント除外) |
+
+**設計上の判断**:
+- `ProjectileSyncTransport` は当初 `ACMu.Net` に置いたが、`ProjectileService`(ACMu.Weapons)を直接参照するため実装層間横参照違反。`ACMu.Weapons` に移動して解消
+- クライアント発射要求はホスト権威実行。クライアントはプロキシを broadcast で受け取るためローカルスポーン不要
+- `NetTarget.Host` で発射要求を送信。`IsMultiplayer && !IsHost && projSync != null` の条件で分岐
+- AliveList 1秒周期による整合性掃除で孤児プロキシ弾を `NetworkCorrection` で除去
+
+---
+
+## 次のタスク: M5 (未着手)
+
+> M4 完了。次は Compat 第1弾(旧ACM互換)。
 
 ---
 
