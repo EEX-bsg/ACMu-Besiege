@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 2773876910
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: tank_effectmac
+      Dependencies: {}

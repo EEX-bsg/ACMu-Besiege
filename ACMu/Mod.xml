@@ -128,6 +128,8 @@ A newly created mod. <!-- FIX: Insert a short description here. -->
 		<Texture name="metal" path="metal.png" />
         <AssetBundle name="myasset" path="assets/tank_effect" />
         <AssetBundle name="myassetMac" path="assetsMac/tank_effectmac" />
+        <AudioClip name="shot" path="88fire.wav" />
+        <AudioClip name="hit" path="hit.wav" />
 
         <!--<Texture name="icon" path="icon.png" />-->
         <!--<Texture name="thumbnail" path="thumbnail.png" />-->

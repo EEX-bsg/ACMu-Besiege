@@ -6,10 +6,10 @@
     <Fallback>Cannon</Fallback>
 
     <ModuleMapperTypes>
-        <Key    displayName="Shot"         key="fire"         default="C" />
-        <Slider displayName="Power"        key="power"        min="50"   max="550"  default="250"  unclamped="false" />
+        <Key displayName="Shot" key="fire" default="C" />
+        <Slider displayName="Power" key="power" min="50" max="550" default="250" unclamped="false" />
         <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.10" max="1.00" default="0.37" unclamped="false" />
-        <Slider displayName="Fuse Timer"   key="fuse-timer"   min="0.5"  max="10.0" default="3.0"  unclamped="false" />
+        <Slider displayName="Fuse Timer" key="fuse-timer" min="0.5" max="10.0" default="3.0" unclamped="false" />
         <Toggle displayName="Hold To Shoot" key="hold-to-shoot" default="true" />
     </ModuleMapperTypes>
 
@@ -36,7 +36,13 @@
                         <Capsule direction="Z" radius="0.06" height="0.35" />
                     </CapsuleCollider>
                 </Colliders>
-                <!-- Mesh/Textureはリソース登録後に有効化 -->
+                <Mesh name="100mmShell">
+                    <Position x="0.0" y="0.0" z="-0.1" />
+                    <Rotation x="0.0" y="-90.0" z="0.0" />
+                    <Scale x="0.75" y="0.75" z="0.75" />
+                </Mesh>
+
+                <Texture name="metal" />
                 <Mesh name="none" />
                 <Texture name="none" />
             </ShootingState>
@@ -51,9 +57,13 @@
                 <Scale x="1.0" y="1.0" z="1.0" />
             </ProjectileStart>
 
-            <!-- ShotFlashPosition: 未設定 → ProjectileStart と同位置にフラッシュ -->
+            <ShotFlashPosition>
+                <Position x="0.0" y="-8.3" z="0.5" />
+                <Rotation x="90.0" y="0.0" z="0.0" />
+                <Scale x="2.0" y="2.0" z="2.0" />
+            </ShotFlashPosition>
 
-            <ProjectilesExplode>true</ProjectilesExplode>
+            <ProjectilesExplode>false</ProjectilesExplode>
             <ExplodeRadius>5.0</ExplodeRadius>
             <ExplodePower>9000.0</ExplodePower>
             <ExplodeUpPower>-4</ExplodeUpPower>
@@ -66,13 +76,13 @@
             <RandomFuseInterval>0.0</RandomFuseInterval>
 
             <!-- バーストショット: false で通常、true で BurstShotNum 発連射 -->
-            <useBurstShot>false</useBurstShot>
+            <useBurstShot>true</useBurstShot>
             <RateOfBurst>4.0</RateOfBurst>
             <BurstShotNum>3</BurstShotNum>
 
             <!-- スポーン遅延 -->
-            <useDelay>false</useDelay>
-            <DelayTime>0.1</DelayTime>
+            <useDelay>true</useDelay>
+            <DelayTime>1.0</DelayTime>
 
             <!-- 物理 -->
             <RecoilMultiplier>0.8</RecoilMultiplier>
@@ -80,19 +90,23 @@
             <RandomDiffusion>0.007</RandomDiffusion>
 
             <!-- エフェクト: バンドル未登録のため空欄。登録後に名前を記入 -->
-            <AssetBundleName name="" />
-            <ExplodeEffect></ExplodeEffect>
-            <ShotFlashEffect></ShotFlashEffect>
-            <TrailEffect></TrailEffect>
-            <BulletEffect></BulletEffect>
+            <AssetBundleName name="myasset" />
+            <ExplodeEffect>APFSDShit</ExplodeEffect>
+            <ShotFlashEffect>ShotEffectMB</ShotFlashEffect>
+            <TrailEffect>newBulletTrailWV100</TrailEffect>
+            <BulletEffect>bulleteffect</BulletEffect>
 
             <!-- 弾薬: 0 = 無限。非ゼロで上限あり -->
             <DefaultAmmo>20</DefaultAmmo>
             <PoolSize>50</PoolSize>
 
             <!-- 発射音 / 着弾音: AudioClip 登録後に有効化 -->
-            <Sounds />
-            <HitSounds />
+            <Sounds>
+                <AudioClip name="shot" />
+            </Sounds>
+            <HitSounds>
+                <AudioClip name="hit" />
+            </HitSounds>
 
         </AdShootingProp>
     </Modules>

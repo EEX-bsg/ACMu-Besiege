@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 591895341
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: tank_effect
+      Dependencies: {}
