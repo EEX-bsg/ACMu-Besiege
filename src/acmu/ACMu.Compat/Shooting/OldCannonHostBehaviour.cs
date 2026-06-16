@@ -220,9 +220,6 @@ namespace ACMu.Compat.Shooting
 
             if (_projectilesExplode && _explosionRadius > 0f)
             {
-                // 着弾音(原ACM互換: HitSounds は着弾時ではなく爆発時に再生される)
-                EffectRegistry.PlaySounds(_hitSoundNames, pos);
-
                 float scaledPower = _explodePower   * 2f;
                 float scaledUp    = _explodeUpPower * 0.25f;
                 Collider[] hits = Physics.OverlapSphere(pos, _explosionRadius);
@@ -233,6 +230,10 @@ namespace ACMu.Compat.Shooting
                         colRb.AddExplosionForce(scaledPower, pos, _explosionRadius, scaledUp);
                 }
             }
+
+            // 着弾音(原ACM互換: HitSounds は着弾時ではなく爆発時に再生される)。
+            // フューズ爆発は ProjectilesExplode(force適用有無)に関わらず必ず鳴る/見える(エフェクトと同じ扱い)
+            EffectRegistry.PlaySounds(_hitSoundNames, pos);
 
             if (!string.IsNullOrEmpty(_explodeEffect))
                 EffectRegistry.Spawn(_bundleName, _explodeEffect, pos, Quaternion.identity, _poolSize, true);
