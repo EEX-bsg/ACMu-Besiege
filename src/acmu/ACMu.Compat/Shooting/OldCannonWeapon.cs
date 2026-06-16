@@ -45,6 +45,8 @@ namespace ACMu.Compat.Shooting
         private float _savedInterval;
         private int   _burstRemaining;
         private int   _ammoRemaining;
+        // バースト完了後、次のバーストを開始できる Time.time。通常レート分の間隔を空ける
+        private float _burstCooldownUntil;
 
         protected override void OnAttached()
         {
@@ -94,6 +96,7 @@ namespace ACMu.Compat.Shooting
             _savedInterval  = Host.BaseSpec.FireIntervalSeconds;
             _burstRemaining = 0;
             _ammoRemaining  = _defaultAmmo;
+            _burstCooldownUntil = 0f;
 
             _soundNames.Clear();
             if (m.Sounds != null)
@@ -112,6 +115,7 @@ namespace ACMu.Compat.Shooting
             if (_useBurstShot && _savedInterval > 0f)
                 Host.BaseSpec.FireIntervalSeconds = _savedInterval;
             _burstRemaining = 0;
+            _burstCooldownUntil = 0f;
         }
 
         protected override void OnUpdate(float deltaTime)
@@ -128,8 +132,8 @@ namespace ACMu.Compat.Shooting
 
             if (_useBurstShot)
             {
-                // 新バースト開始: トリガーかつ前のバーストが完了済み
-                if (trigger && _burstRemaining == 0)
+                // 新バースト開始: トリガー、前のバーストが完了済み、通常レート分のクールダウンも経過済み
+                if (trigger && _burstRemaining == 0 && Time.time >= _burstCooldownUntil)
                 {
                     _burstRemaining = _burstShotNum;
                     Host.BaseSpec.FireIntervalSeconds = _rateOfBurst > 0f ? 1f / _rateOfBurst : 0.1f;
@@ -162,12 +166,18 @@ namespace ACMu.Compat.Shooting
             if (!_useBurstShot && Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out rateOfFire))
                 Host.BaseSpec.FireIntervalSeconds = rateOfFire;
 
-            // バースト残弾カウント処理
+            // バースト残弾カウント処理: バースト完了時、通常レート分のクールダウンを設定
             if (_useBurstShot && _burstRemaining > 0)
             {
                 _burstRemaining--;
                 if (_burstRemaining == 0)
-                    Host.BaseSpec.FireIntervalSeconds = _savedInterval;
+                {
+                    float normalInterval;
+                    if (!Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out normalInterval))
+                        normalInterval = _savedInterval;
+                    Host.BaseSpec.FireIntervalSeconds = normalInterval;
+                    _burstCooldownUntil = Time.time + normalInterval;
+                }
             }
 
             // 弾薬消費(GODMODE 弾薬無限時は消費しない)
@@ -191,23 +201,21 @@ namespace ACMu.Compat.Shooting
             // ランダムインターバルジッター(発射タイミングのバラつき)
             if (_randomInterval > 0f)
                 context.DelaySeconds += UnityEngine.Random.Range(0f, _randomInterval);
-
-            // 発射フラッシュエフェクト(専用位置があればそちらを使う)
-            var hostBehaviour = Host as OldCannonHostBehaviour;
-            Vector3    flashPos = hostBehaviour != null ? hostBehaviour.FlashMuzzlePosition : Host.MuzzlePosition;
-            Quaternion flashRot = hostBehaviour != null ? hostBehaviour.FlashMuzzleRotation : Host.MuzzleRotation;
-            EffectRegistry.Spawn(_bundleName, _shotFlashEffectName, flashPos, flashRot, _poolSize, true);
-
-            // 発射音
-            EffectRegistry.PlaySounds(_soundNames, flashPos);
         }
 
         protected override void OnAfterFire(FireContext context, ProjectileHandle projectile)
         {
+            // 発射フラッシュエフェクト / 発射音: useDelay 等で DelaySeconds が掛かっている場合、
+            // 弾が実際に発生するこのタイミングまで遅らせて同期させる(専用位置があればそちらを使う)
+            var host = Host as OldCannonHostBehaviour;
+            Vector3    flashPos = host != null ? host.FlashMuzzlePosition : Host.MuzzlePosition;
+            Quaternion flashRot = host != null ? host.FlashMuzzleRotation : Host.MuzzleRotation;
+            EffectRegistry.Spawn(_bundleName, _shotFlashEffectName, flashPos, flashRot, _poolSize, true);
+            EffectRegistry.PlaySounds(_soundNames, flashPos);
+
             if (!projectile.IsValid) return;
 
             // 弾体エフェクト / フューズ / メッシュ等をアタッチ
-            var host = Host as OldCannonHostBehaviour;
             if (host != null)
                 host.AttachProjectileEffects(projectile);
 
