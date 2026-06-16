@@ -111,7 +111,7 @@ namespace ACMu.Compat.Shooting
         [XmlArrayItem("AudioClip", typeof(AssetBundleNameRef))]
         public List<AssetBundleNameRef> Sounds = new List<AssetBundleNameRef>();
 
-        /// <summary>着弾時に再生するAudioClipのリスト。</summary>
+        /// <summary>爆発時に再生するAudioClipのリスト(原ACM互換: 名前は「着弾音」だが実際は爆発トリガー時に再生される)。</summary>
         [XmlArray("HitSounds")]
         [XmlArrayItem("AudioClip", typeof(AssetBundleNameRef))]
         public List<AssetBundleNameRef> HitSounds = new List<AssetBundleNameRef>();

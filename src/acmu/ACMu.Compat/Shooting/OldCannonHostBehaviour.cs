@@ -28,6 +28,9 @@ namespace ACMu.Compat.Shooting
         private float  _fuseDelayTime   = 0f;
         private XmlTransform _shotFlashTransform;
 
+        // 着弾音(実態は爆発音): OnFuseExplosion は OldCannonWeapon.OnExplosion を経由しないため自前で保持
+        private readonly List<string> _hitSoundNames = new List<string>();
+
         // フューズ爆発デリゲート: OnSimulateStart で1回生成してキャッシュ
         private Action<ProjectileHandle> _fuseDelegate;
 
@@ -88,6 +91,11 @@ namespace ACMu.Compat.Shooting
                 _fuseTime          = m.FuseTime;
                 _fuseDelayTime     = m.FuseDelayTime;
                 _shotFlashTransform = m.ShotFlashPosition;
+
+                _hitSoundNames.Clear();
+                if (m.HitSounds != null)
+                    foreach (var s in m.HitSounds)
+                        if (s != null && !string.IsNullOrEmpty(s.Name)) _hitSoundNames.Add(s.Name);
             }
 
             if (Projectiles != null)
@@ -212,6 +220,9 @@ namespace ACMu.Compat.Shooting
 
             if (_projectilesExplode && _explosionRadius > 0f)
             {
+                // 着弾音(原ACM互換: HitSounds は着弾時ではなく爆発時に再生される)
+                EffectRegistry.PlaySounds(_hitSoundNames, pos);
+
                 float scaledPower = _explodePower   * 2f;
                 float scaledUp    = _explodeUpPower * 0.25f;
                 Collider[] hits = Physics.OverlapSphere(pos, _explosionRadius);

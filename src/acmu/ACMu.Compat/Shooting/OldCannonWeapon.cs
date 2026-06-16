@@ -235,9 +235,6 @@ namespace ACMu.Compat.Shooting
             if (context.HitObject != null && (_blockDamage > 0f || _entityDamage > 0f))
                 DamageRegistry.Apply(context.HitObject, _blockDamage, _entityDamage);
 
-            // 着弾音
-            EffectRegistry.PlaySounds(_hitSoundNames, context.Position);
-
             // ProjectilesDespawnImmediately=true のときのみ着弾で消える。
             // false の場合はフューズ / 寿命タイムアウトで消える(原ACM互換)。
             if (_projectilesDespawnImmediately)
@@ -248,6 +245,9 @@ namespace ACMu.Compat.Shooting
         {
             if (!_projectilesExplode || context.ExplosionRadius <= 0f) return;
             if (context.SuppressDefaultExplosion) return;
+
+            // 着弾音(原ACM互換: HitSounds は着弾時ではなく爆発時に再生される)
+            EffectRegistry.PlaySounds(_hitSoundNames, context.Position);
 
             float scaledPower   = _explodePower   * 2f;
             float scaledUpPower = _explodeUpPower * 0.25f;
