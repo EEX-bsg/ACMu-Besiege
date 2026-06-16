@@ -63,6 +63,7 @@ namespace ACMu.Host
             coordinator.SortAndBootstrap();
 
             DamageRegistry.SetApplyFn(DamageApplierAdapter.ApplyDamage);
+            GameRulesRegistry.SetInfiniteAmmoFn(GameSessionInfoAdapter.IsInfiniteAmmoMode);
 
             var effectLoader = go.AddComponent<EffectBundleAdapter>();
             EffectRegistry.SetFunctions(

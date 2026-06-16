@@ -34,6 +34,12 @@ namespace ACMu.Adapter
         }
         public float NetworkSendRate { get { return 20f; } }
 
+        // GodMode の弾薬無限チート。Compat 層の GameRulesRegistry から委譲される。
+        internal static bool IsInfiniteAmmoMode()
+        {
+            return StatMaster.GodTools.InfiniteAmmoMode;
+        }
+
         public void OnModLoad() { }
         public void OnSimulationStart(bool isMultiplayer) { }
         public void OnSimulationStop() { }

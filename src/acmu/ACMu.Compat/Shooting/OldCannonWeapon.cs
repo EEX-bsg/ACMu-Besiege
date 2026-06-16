@@ -146,7 +146,7 @@ namespace ACMu.Compat.Shooting
 
         protected override FireDecision OnValidateFire(FireContext context)
         {
-            if (_defaultAmmo > 0 && _ammoRemaining <= 0)
+            if (_defaultAmmo > 0 && _ammoRemaining <= 0 && !GameRulesRegistry.IsInfiniteAmmo())
                 return FireDecision.Suppress;
             return FireDecision.Proceed;
         }
@@ -170,8 +170,8 @@ namespace ACMu.Compat.Shooting
                     Host.BaseSpec.FireIntervalSeconds = _savedInterval;
             }
 
-            // 弾薬消費
-            if (_defaultAmmo > 0 && _ammoRemaining > 0)
+            // 弾薬消費(GODMODE 弾薬無限時は消費しない)
+            if (_defaultAmmo > 0 && _ammoRemaining > 0 && !GameRulesRegistry.IsInfiniteAmmo())
                 _ammoRemaining--;
 
             // ランダム拡散: Seed 由来の乱数で全ピア決定論的
