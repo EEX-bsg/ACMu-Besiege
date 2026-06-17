@@ -13,6 +13,11 @@ namespace ACMu.Compat.Shooting
         internal const string RateOfFireSliderName  = "rate-of-fire";
         internal const string HoldToShootToggleName = "hold-to-shoot";
         internal const string FuseTimerSliderName   = "fuse-timer";
+        internal const string ReloadKeyName             = "reload";
+        internal const string AutoReloadToggleName      = "auto-reload";
+        internal const string MagazineCapacitySliderName = "magazine-capacity";
+        internal const string ReloadTimeSliderName        = "reload-time";
+        internal const string ThrustDelayTimerSliderName  = "thrust-delay-timer";
 
         [XmlElement("ShootingState")]
         public ShootingState Shooting = new ShootingState();
@@ -57,9 +62,9 @@ namespace ACMu.Compat.Shooting
         [XmlElement("RandomFuseInterval")]
         public float RandomFuseInterval = 0f;
 
-        /// <summary>useTimefuse=true のときに使用するフューズ時間(秒)。FuseTimerSlider が無い場合のデフォルト値。</summary>
+        /// <summary>useTimefuse=true のときに使用するフューズ時間(秒)。0 の場合は実行時に 3f にフォールバックする。旧 ACM XML との互換のため 0 をデフォルトとし必須扱いを回避。</summary>
         [XmlElement("FuseTime")]
-        public float FuseTime = 3f;
+        public float FuseTime = 0f;
 
         [XmlElement("useTimefuse")]
         public bool UseTimefuse = false;
@@ -77,19 +82,48 @@ namespace ACMu.Compat.Shooting
         public bool UseDelay = false;
 
         [XmlElement("DelayTime")]
-        public float DelayTime = 0.05f;
+        public float DelayTime = 0f;
 
         [XmlElement("useBurstShot")]
         public bool UseBurstShot = false;
 
         [XmlElement("RateOfBurst")]
-        public float RateOfBurst = 4f;
+        public float RateOfBurst = 0f;
 
         [XmlElement("BurstShotNum")]
-        public int BurstShotNum = 3;
+        public int BurstShotNum = 0;
 
         [XmlElement("DefaultAmmo")]
         public int DefaultAmmo = 0;
+
+        [XmlElement("useMagazine")]
+        public bool UseMagazine = false;
+
+        [XmlElement("MagazineInfo")]
+        public MagazineState MagazineInfo = null;
+
+        /// <summary>ブースター機能を有効化するフラグ。trueで発射時にPurgeVector/PurgePowerによるパージ推力が掛かる。docs/XML/ACMモジュール.xml 254行。</summary>
+        [XmlElement("useBooster")]
+        public bool UseBooster = false;
+
+        /// <summary>ブースター起動遅延を有効化するフラグ。trueのときのみ、パージ後ThrustDelayTimerSlider秒後に再着火する。falseならパージのみで再着火は発生しない。docs/XML/ACMモジュール.xml 218行。</summary>
+        [XmlElement("useThrustDelayTimer")]
+        public bool UseThrustDelayTimer = false;
+
+        [XmlElement("ThrustDelayTimerSlider")]
+        public MSliderReference ThrustDelayTimerSlider;
+
+        /// <summary>ブースター推力の方向(弾体ローカル空間)。null の場合は実行時に Vector3.forward にフォールバックする。</summary>
+        [XmlElement("PurgeVector")]
+        public XmlVector3 PurgeVector = null;
+
+        /// <summary>パージ時/再着火時、両方で使用する推力。個別の着火推力キーは原ACM側で未確認のため共用する。</summary>
+        [XmlElement("PurgePower")]
+        public float PurgePower = 0f;
+
+        /// <summary>着弾時に対象ブロック(と子ブロック)を再帰的に凍結する。docs/XML/ACMモジュール.xml 287行で確認済み。</summary>
+        [XmlElement("useFreezingAttack")]
+        public bool UseFreezingAttack = false;
 
         [XmlElement("PoolSize")]
         public int PoolSize = 100;

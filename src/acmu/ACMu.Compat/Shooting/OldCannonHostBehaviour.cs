@@ -8,11 +8,17 @@ namespace ACMu.Compat.Shooting
 {
     public sealed class OldCannonHostBehaviour : WeaponHostBehaviour<OldCannonModule>
     {
+        // ThrustDelayTimerSlider が未設置のブロックで使うフォールバック既定値
+        private const float FallbackThrustDelayTimer = 0.5f;
+
         private CollisionDetectionMode _collisionMode = CollisionDetectionMode.ContinuousDynamic;
 
         // handle.Id → 弾体にアタッチしたトレイル/弾体エフェクトGO
         private readonly Dictionary<int, GameObject> _trailGos  = new Dictionary<int, GameObject>();
         private readonly Dictionary<int, GameObject> _bulletGos = new Dictionary<int, GameObject>();
+
+        // handle.Id → Attaches=true で命中対象に刺さって止まっている弾体GO(Despawn時に親子関係を復元する)
+        private readonly Dictionary<int, GameObject> _attachedGos = new Dictionary<int, GameObject>();
 
         // エフェクト・爆発に必要な情報をシミュ開始時にキャッシュ
         private string _bundleName      = "";
@@ -27,6 +33,12 @@ namespace ACMu.Compat.Shooting
         private float  _fuseTime        = 3f;
         private float  _fuseDelayTime   = 0f;
         private XmlTransform _shotFlashTransform;
+
+        // ブースター: useBooster=スラスター全体有効化 / useThrustDelayTimer=点火遅延時間の有無
+        private bool    _useBooster          = false;
+        private bool    _useThrustDelayTimer = false;
+        private Vector3 _purgeVector         = Vector3.forward;
+        private float   _purgePower          = 0f;
 
         // 着弾音(実態は爆発音): OnFuseExplosion は OldCannonWeapon.OnExplosion を経由しないため自前で保持
         private readonly List<string> _hitSoundNames = new List<string>();
@@ -92,6 +104,13 @@ namespace ACMu.Compat.Shooting
                 _fuseDelayTime     = m.FuseDelayTime;
                 _shotFlashTransform = m.ShotFlashPosition;
 
+                _useBooster          = m.UseBooster;
+                _useThrustDelayTimer = m.UseThrustDelayTimer;
+                _purgeVector = m.PurgeVector != null
+                    ? new Vector3(m.PurgeVector.x, m.PurgeVector.y, m.PurgeVector.z)
+                    : Vector3.forward;
+                _purgePower  = m.PurgePower;
+
                 _hitSoundNames.Clear();
                 if (m.HitSounds != null)
                     foreach (var s in m.HitSounds)
@@ -115,6 +134,12 @@ namespace ACMu.Compat.Shooting
         {
             if (Projectiles != null)
                 Projectiles.Despawned -= OnProjectileDespawned;
+
+            // シミュ終了でブロックが破棄される前に、刺さっている弾体を必ず解放する
+            // (親の破棄に巻き込まれてプール GO 自体が消えるのを防ぐ)
+            foreach (var kv in _attachedGos)
+                DetachFromTarget(kv.Value);
+            _attachedGos.Clear();
 
             _trailGos.Clear();
             _bulletGos.Clear();
@@ -172,7 +197,7 @@ namespace ACMu.Compat.Shooting
             {
                 float fuse;
                 if (!Block.TryGetSlider(OldCannonModule.FuseTimerSliderName, out fuse))
-                    fuse = _fuseTime;
+                    fuse = _fuseTime > 0f ? _fuseTime : 3f;
 
                 float jitter = _randomFuseInterval > 0f
                     ? UnityEngine.Random.Range(-_randomFuseInterval, _randomFuseInterval)
@@ -182,6 +207,31 @@ namespace ACMu.Compat.Shooting
                 var fuseTimer = projGo.GetComponent<ProjectileFuseTimer>();
                 if (fuseTimer == null) fuseTimer = projGo.AddComponent<ProjectileFuseTimer>();
                 fuseTimer.Activate(handle, fuse, _fuseDelegate);
+            }
+
+            // ---- ブースター: パージ + 横方向安定化 + 連続前方推力(×100fは原ACM固定スケール) ----
+            if (_useBooster)
+            {
+                // パージ: 発射時に必ず1回掛かる初速付与
+                if (rb != null)
+                    rb.AddRelativeForce(_purgeVector * _purgePower * 100f, ForceMode.Impulse);
+
+                // boosterPower = PowerSlider.Value(原ACM互換: 連続推力はパワースライダー参照)
+                float boosterPower;
+                if (!Block.TryGetSlider(OldCannonModule.PowerSliderName, out boosterPower))
+                    boosterPower = 0f;
+
+                // useThrustDelayTimer=true: ThrustDelayTimerSlider 秒後に点火 / false: 即時点火(遅延0)
+                float delay = 0f;
+                if (_useThrustDelayTimer)
+                {
+                    if (!Block.TryGetSlider(OldCannonModule.ThrustDelayTimerSliderName, out delay))
+                        delay = FallbackThrustDelayTimer;
+                }
+
+                var booster = projGo.GetComponent<ProjectileBoosterBehaviour>();
+                if (booster == null) booster = projGo.AddComponent<ProjectileBoosterBehaviour>();
+                booster.Activate(rb, boosterPower, delay);
             }
 
             // ---- トレイル/弾体エフェクト ----
@@ -241,12 +291,46 @@ namespace ACMu.Compat.Shooting
             Projectiles.Despawn(handle, DespawnReason.Manual);
         }
 
+        // Attaches=true: 弾体を命中対象へ刺して固定する。OldCannonWeapon.OnImpact から呼ばれる。
+        internal void AttachProjectile(ProjectileHandle handle, Transform target)
+        {
+            GameObject projGo;
+            if (!Projectiles.TryGetGameObject(handle, out projGo)) return;
+
+            var rb = projGo.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+
+            projGo.transform.SetParent(target, true);
+            _attachedGos[handle.Id] = projGo;
+        }
+
+        // 刺さっている弾体の親子関係・物理状態を復元する(Despawn / シミュ終了時)
+        private static void DetachFromTarget(GameObject projGo)
+        {
+            if (projGo == null) return;
+            projGo.transform.SetParent(null, true);
+            var rb = projGo.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = false;
+        }
+
         // Despawned ハンドラ
         // ※ Despawned は SetActive(false) 後に発火するため TryGetGameObject は使えない
         private void OnProjectileDespawned(ProjectileHandle handle, DespawnReason reason)
         {
             OldCannonModule m = Module;
             string bundle      = _bundleName;
+
+            GameObject attachedGo;
+            if (_attachedGos.TryGetValue(handle.Id, out attachedGo))
+            {
+                _attachedGos.Remove(handle.Id);
+                DetachFromTarget(attachedGo);
+            }
 
             GameObject trailGo;
             if (_trailGos.TryGetValue(handle.Id, out trailGo))

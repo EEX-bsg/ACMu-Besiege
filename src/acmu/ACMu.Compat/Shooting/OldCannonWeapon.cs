@@ -10,6 +10,10 @@ namespace ACMu.Compat.Shooting
     {
         internal const string SharedProjectileKey = "compat-adshooting";
 
+        // ブロックに対応スライダーが無い場合のみ使うフォールバック既定値
+        private const int   FallbackMagazineCapacity = 10;
+        private const float FallbackReloadTime       = 2f;
+
         // OldCannonHostBehaviour が OnSimulateStart 内でセットし、AttachTo 完了後にクリアする。
         // Unity はシングルスレッドのためこの static パターンは安全。
         internal static OldCannonModule LoadingModule;
@@ -25,6 +29,8 @@ namespace ACMu.Compat.Shooting
         private int    _poolSize;
         private float  _blockDamage;
         private float  _entityDamage;
+        private bool   _attaches;
+        private bool   _freezing;
 
         // OnSimulationStart でキャッシュ
         private float  _recoilMultiplier;
@@ -37,9 +43,16 @@ namespace ACMu.Compat.Shooting
         private int    _burstShotNum;
         private int    _defaultAmmo;
 
+        // マガジン/リロード(useMagazine)
+        private bool _useMagazine;
+        private bool _useReloadKey;
+        private bool _forceAutoReload;
+        private bool _useAutoReloadToggle;
+
         // サウンドリスト: OnSimulationStart で一度構築、ホットパスで参照のみ
-        private readonly List<string> _soundNames    = new List<string>();
-        private readonly List<string> _hitSoundNames = new List<string>();
+        private readonly List<string> _soundNames     = new List<string>();
+        private readonly List<string> _hitSoundNames  = new List<string>();
+        private readonly List<string> _reloadSoundNames = new List<string>();
 
         // バースト/弾薬管理の実行時状態
         private float _savedInterval;
@@ -47,6 +60,12 @@ namespace ACMu.Compat.Shooting
         private int   _ammoRemaining;
         // バースト完了後、次のバーストを開始できる Time.time。通常レート分の間隔を空ける
         private float _burstCooldownUntil;
+
+        // マガジン実行時状態(useMagazine時のみ使用)
+        private int   _ammoLeft;
+        private int   _ammoStock;
+        private bool  _isReloading;
+        private float _reloadTimeRemaining;
 
         protected override void OnAttached()
         {
@@ -71,6 +90,8 @@ namespace ACMu.Compat.Shooting
 
             _blockDamage  = m.Shooting != null ? m.Shooting.BlockDamage  : 0f;
             _entityDamage = m.Shooting != null ? m.Shooting.EntityDamage : 0f;
+            _attaches     = m.Shooting != null && m.Shooting.Attaches;
+            _freezing     = m.UseFreezingAttack;
 
             Host.BaseSpec.Damage          = _entityDamage;
             Host.BaseSpec.ExplosionRadius = m.ProjectilesExplode ? m.ExplodeRadius : 0f;
@@ -90,7 +111,7 @@ namespace ACMu.Compat.Shooting
             _delayTime        = m.DelayTime;
             _useBurstShot     = m.UseBurstShot;
             _rateOfBurst      = m.RateOfBurst;
-            _burstShotNum     = m.BurstShotNum;
+            _burstShotNum     = m.BurstShotNum > 0 ? m.BurstShotNum : 3;
             _defaultAmmo      = m.DefaultAmmo;
 
             _savedInterval  = Host.BaseSpec.FireIntervalSeconds;
@@ -107,6 +128,32 @@ namespace ACMu.Compat.Shooting
             if (m.HitSounds != null)
                 foreach (var s in m.HitSounds)
                     if (s != null && !string.IsNullOrEmpty(s.Name)) _hitSoundNames.Add(s.Name);
+
+            _useMagazine = m.UseMagazine;
+            MagazineState mag = m.MagazineInfo;
+            _useReloadKey        = mag != null && mag.UseReloadKey;
+            _forceAutoReload     = mag != null && mag.ForceAutoReload;
+            _useAutoReloadToggle = mag != null && mag.UseAutoReloadToggle;
+
+            _reloadSoundNames.Clear();
+            if (mag != null && mag.ReloadSounds != null)
+                foreach (var s in mag.ReloadSounds)
+                    if (s != null && !string.IsNullOrEmpty(s.Name)) _reloadSoundNames.Add(s.Name);
+
+            _isReloading = false;
+            _reloadTimeRemaining = 0f;
+
+            if (_useMagazine)
+            {
+                int capacity = GetMagazineCapacity();
+                _ammoLeft  = Mathf.Min(_defaultAmmo, capacity);
+                _ammoStock = Mathf.Max(_defaultAmmo - capacity, 0);
+            }
+            else
+            {
+                _ammoLeft  = 0;
+                _ammoStock = 0;
+            }
         }
 
         protected override void OnSimulationStop()
@@ -116,11 +163,17 @@ namespace ACMu.Compat.Shooting
                 Host.BaseSpec.FireIntervalSeconds = _savedInterval;
             _burstRemaining = 0;
             _burstCooldownUntil = 0f;
+
+            _isReloading = false;
+            _reloadTimeRemaining = 0f;
         }
 
         protected override void OnUpdate(float deltaTime)
         {
             if (!Host.IsAuthority) return;
+
+            if (_useMagazine)
+                UpdateMagazine(deltaTime);
 
             bool holdToShoot;
             if (!Host.Block.TryGetToggle(OldCannonModule.HoldToShootToggleName, out holdToShoot))
@@ -150,8 +203,16 @@ namespace ACMu.Compat.Shooting
 
         protected override FireDecision OnValidateFire(FireContext context)
         {
-            if (_defaultAmmo > 0 && _ammoRemaining <= 0 && !GameRulesRegistry.IsInfiniteAmmo())
-                return FireDecision.Suppress;
+            if (_defaultAmmo <= 0 || GameRulesRegistry.IsInfiniteAmmo())
+                return FireDecision.Proceed;
+
+            if (_useMagazine)
+            {
+                if (_isReloading || _ammoLeft <= 0) return FireDecision.Suppress;
+                return FireDecision.Proceed;
+            }
+
+            if (_ammoRemaining <= 0) return FireDecision.Suppress;
             return FireDecision.Proceed;
         }
 
@@ -181,8 +242,17 @@ namespace ACMu.Compat.Shooting
             }
 
             // 弾薬消費(GODMODE 弾薬無限時は消費しない)
-            if (_defaultAmmo > 0 && _ammoRemaining > 0 && !GameRulesRegistry.IsInfiniteAmmo())
-                _ammoRemaining--;
+            if (_defaultAmmo > 0 && !GameRulesRegistry.IsInfiniteAmmo())
+            {
+                if (_useMagazine)
+                {
+                    if (_ammoLeft > 0) _ammoLeft--;
+                }
+                else if (_ammoRemaining > 0)
+                {
+                    _ammoRemaining--;
+                }
+            }
 
             // ランダム拡散: Seed 由来の乱数で全ピア決定論的
             if (_randomDiffusion > 0f)
@@ -201,6 +271,68 @@ namespace ACMu.Compat.Shooting
             // ランダムインターバルジッター(発射タイミングのバラつき)
             if (_randomInterval > 0f)
                 context.DelaySeconds += UnityEngine.Random.Range(0f, _randomInterval);
+        }
+
+        // useMagazine時の毎フレーム処理: リロード進行、または自動/手動リロード開始判定
+        private void UpdateMagazine(float deltaTime)
+        {
+            if (_isReloading)
+            {
+                _reloadTimeRemaining -= deltaTime;
+                if (_reloadTimeRemaining <= 0f)
+                    FinishReload();
+                return;
+            }
+
+            bool reloadKeyPressed = _useReloadKey && Host.Block.IsKeyPressed(OldCannonModule.ReloadKeyName);
+            int  capacity = GetMagazineCapacity();
+
+            if (reloadKeyPressed && _ammoStock > 0 && _ammoLeft < capacity)
+            {
+                StartReload();
+                return;
+            }
+
+            bool autoToggleOn;
+            if (!Host.Block.TryGetToggle(OldCannonModule.AutoReloadToggleName, out autoToggleOn))
+                autoToggleOn = false;
+
+            bool wantsAutoReload = _forceAutoReload || (_useAutoReloadToggle && autoToggleOn);
+            if (wantsAutoReload && _ammoLeft <= 0 && _ammoStock > 0)
+                StartReload();
+        }
+
+        private void StartReload()
+        {
+            _isReloading = true;
+
+            float reloadTime;
+            if (!Host.Block.TryGetSlider(OldCannonModule.ReloadTimeSliderName, out reloadTime))
+                reloadTime = FallbackReloadTime;
+            _reloadTimeRemaining = Mathf.Max(reloadTime, 0f);
+
+            EffectRegistry.PlaySounds(_reloadSoundNames, Host.MuzzlePosition);
+        }
+
+        private void FinishReload()
+        {
+            _isReloading = false;
+            _reloadTimeRemaining = 0f;
+
+            int capacity = GetMagazineCapacity();
+            int space = capacity - _ammoLeft;
+            if (space <= 0) return;
+            int moved = Mathf.Min(_ammoStock, space);
+            _ammoLeft  += moved;
+            _ammoStock -= moved;
+        }
+
+        private int GetMagazineCapacity()
+        {
+            float capacity;
+            if (!Host.Block.TryGetSlider(OldCannonModule.MagazineCapacitySliderName, out capacity))
+                return FallbackMagazineCapacity;
+            return Mathf.Max(Mathf.RoundToInt(capacity), 1);
         }
 
         protected override void OnAfterFire(FireContext context, ProjectileHandle projectile)
@@ -235,9 +367,25 @@ namespace ACMu.Compat.Shooting
             if (context.HitObject != null && (_blockDamage > 0f || _entityDamage > 0f))
                 DamageRegistry.Apply(context.HitObject, _blockDamage, _entityDamage);
 
-            // ProjectilesDespawnImmediately=true のときのみ着弾で消える。
-            // false の場合はフューズ / 寿命タイムアウトで消える(原ACM互換)。
-            if (_projectilesDespawnImmediately)
+            // useFreezingAttack=true: 命中対象(と子ブロック)を凍結する
+            if (_freezing && context.HitObject != null)
+                FreezeRegistry.Apply(context.HitObject);
+
+            // Attaches=true: 命中対象に刺さって止まる。Despawn は寿命タイムアウト任せ(原ACM互換)
+            if (_attaches && context.HitObject != null)
+            {
+                var attachHost = Host as OldCannonHostBehaviour;
+                if (attachHost != null)
+                {
+                    attachHost.AttachProjectile(context.Projectile, context.HitObject.transform);
+                    return;
+                }
+            }
+
+            // ProjectilesExplode=true: OnExplosion の前に Despawn → ProjectileFuseTimer.OnDisable でフューズキャンセル → 二重爆発防止
+            // ProjectilesDespawnImmediately=true: 爆発なし即消滅
+            // いずれでもない(貫通弾等): フューズ / 寿命タイムアウトで消える
+            if (_projectilesExplode || _projectilesDespawnImmediately)
                 Host.Projectiles.Despawn(context.Projectile, DespawnReason.Impact);
         }
 
