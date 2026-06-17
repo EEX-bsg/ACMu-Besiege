@@ -43,27 +43,33 @@ namespace ACMu.Compat.Shooting
         public XmlTransform ShotFlashPosition;
 
         [XmlElement("ProjectilesExplode")]
+        [DefaultValue(false)]
         public bool ProjectilesExplode = true;
 
         [XmlElement("ExplodeRadius")]
+        [DefaultValue(3f)]
         public float ExplodeRadius = 3f;
 
         [XmlElement("ExplodePower")]
+        [DefaultValue(10f)]
         public float ExplodePower = 10f;
 
         [XmlElement("ExplodeUpPower")]
+        [DefaultValue(0f)]
         public float ExplodeUpPower = 0f;
 
         [XmlElement("ProjectilesDespawnImmediately")]
+        [DefaultValue(false)]
         public bool ProjectilesDespawnImmediately = false;
 
         [XmlElement("FuseDelayTime")]
+        [DefaultValue(0f)]
         public float FuseDelayTime = 0f;
 
         [XmlElement("RandomFuseInterval")]
+        [DefaultValue(0f)]
         public float RandomFuseInterval = 0f;
 
-        /// <summary>useTimefuse=true のときに使用するフューズ時間(秒)。0 の場合は実行時に 3f にフォールバック。[DefaultValue] で省略可能化(ETCM 互換)。</summary>
         [XmlElement("FuseTime")]
         [DefaultValue(0f)]
         public float FuseTime = 0f;
@@ -73,12 +79,15 @@ namespace ACMu.Compat.Shooting
         public bool UseTimefuse = false;
 
         [XmlElement("RecoilMultiplier")]
+        [DefaultValue(0.6f)]
         public float RecoilMultiplier = 0.6f;
 
         [XmlElement("RandomInterval")]
+        [DefaultValue(0.03f)]
         public float RandomInterval = 0.03f;
 
         [XmlElement("RandomDiffusion")]
+        [DefaultValue(0.01f)]
         public float RandomDiffusion = 0.01f;
 
         [XmlElement("useDelay")]
@@ -109,6 +118,7 @@ namespace ACMu.Compat.Shooting
         public bool UseMagazine = false;
 
         [XmlElement("MagazineInfo")]
+        [DefaultValue(null)]
         public MagazineState MagazineInfo = null;
 
         /// <summary>ブースター機能を有効化するフラグ。trueで発射時にPurgeVector/PurgePowerによるパージ推力が掛かる。docs/XML/ACMモジュール.xml 254行。</summary>
@@ -122,10 +132,12 @@ namespace ACMu.Compat.Shooting
         public bool UseThrustDelayTimer = false;
 
         [XmlElement("ThrustDelayTimerSlider")]
+        [DefaultValue(null)]
         public MSliderReference ThrustDelayTimerSlider;
 
         /// <summary>ブースター推力の方向(弾体ローカル空間)。null の場合は実行時に Vector3.forward にフォールバックする。</summary>
         [XmlElement("PurgeVector")]
+        [DefaultValue(null)]
         public XmlVector3 PurgeVector = null;
 
         /// <summary>パージ時/再着火時、両方で使用する推力。個別の着火推力キーは原ACM側で未確認のため共用する。</summary>
@@ -133,7 +145,7 @@ namespace ACMu.Compat.Shooting
         [DefaultValue(0f)]
         public float PurgePower = 0f;
 
-        /// <summary>着弾時に対象ブロック(と子ブロック)を再帰的に凍結する。docs/XML/ACMモジュール.xml 287行で確認済み。</summary>
+        /// <summary>着弾時に対象ブロック(と子ブロック)を再帰的に凍結する。</summary>
         [XmlElement("useFreezingAttack")]
         [DefaultValue(false)]
         public bool UseFreezingAttack = false;
@@ -156,11 +168,13 @@ namespace ACMu.Compat.Shooting
         /// <summary>発射時に再生するAudioClipのリスト。複数指定するとランダム選択。</summary>
         [XmlArray("Sounds")]
         [XmlArrayItem("AudioClip", typeof(AssetBundleNameRef))]
+        [DefaultValue(null)]
         public List<AssetBundleNameRef> Sounds = new List<AssetBundleNameRef>();
 
         /// <summary>爆発時に再生するAudioClipのリスト(原ACM互換: 名前は「着弾音」だが実際は爆発トリガー時に再生される)。</summary>
         [XmlArray("HitSounds")]
         [XmlArrayItem("AudioClip", typeof(AssetBundleNameRef))]
+        [DefaultValue(null)]
         public List<AssetBundleNameRef> HitSounds = new List<AssetBundleNameRef>();
     }
 }
