@@ -91,7 +91,7 @@ namespace ACMu.Compat.Shooting
             _blockDamage  = m.Shooting != null ? m.Shooting.BlockDamage  : 0f;
             _entityDamage = m.Shooting != null ? m.Shooting.EntityDamage : 0f;
             _attaches     = m.Shooting != null && m.Shooting.Attaches;
-            _freezing     = m.UseFreezingAttack ?? false;
+            _freezing     = m.UseFreezingAttack;
 
             Host.BaseSpec.Damage          = _entityDamage;
             Host.BaseSpec.ExplosionRadius = m.ProjectilesExplode ? m.ExplodeRadius : 0f;
@@ -107,12 +107,11 @@ namespace ACMu.Compat.Shooting
             _recoilMultiplier = m.RecoilMultiplier;
             _randomDiffusion  = m.RandomDiffusion;
             _randomInterval   = m.RandomInterval;
-            _useDelay         = m.UseDelay ?? false;
-            _delayTime        = m.DelayTime ?? 0f;
-            _useBurstShot     = m.UseBurstShot ?? false;
-            _rateOfBurst      = m.RateOfBurst ?? 0f;
-            int bsn           = m.BurstShotNum ?? 0;
-            _burstShotNum     = bsn > 0 ? bsn : 3;
+            _useDelay         = m.UseDelay;
+            _delayTime        = m.DelayTime;
+            _useBurstShot     = m.UseBurstShot;
+            _rateOfBurst      = m.RateOfBurst;
+            _burstShotNum     = m.BurstShotNum > 0 ? m.BurstShotNum : 3;
             _defaultAmmo      = m.DefaultAmmo;
 
             _savedInterval  = Host.BaseSpec.FireIntervalSeconds;
@@ -130,7 +129,7 @@ namespace ACMu.Compat.Shooting
                 foreach (var s in m.HitSounds)
                     if (s != null && !string.IsNullOrEmpty(s.Name)) _hitSoundNames.Add(s.Name);
 
-            _useMagazine = m.UseMagazine ?? false;
+            _useMagazine = m.UseMagazine;
             MagazineState mag = m.MagazineInfo;
             _useReloadKey        = mag != null && mag.UseReloadKey;
             _forceAutoReload     = mag != null && mag.ForceAutoReload;

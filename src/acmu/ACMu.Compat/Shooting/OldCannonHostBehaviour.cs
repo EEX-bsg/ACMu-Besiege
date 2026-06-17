@@ -99,17 +99,17 @@ namespace ACMu.Compat.Shooting
                 _projectilesExplode = m.ProjectilesExplode;
                 _poolSize          = m.PoolSize;
                 _randomFuseInterval = m.RandomFuseInterval;
-                _useTimefuse       = m.UseTimefuse ?? false;
-                _fuseTime          = m.FuseTime ?? 0f;
+                _useTimefuse       = m.UseTimefuse;
+                _fuseTime          = m.FuseTime;
                 _fuseDelayTime     = m.FuseDelayTime;
                 _shotFlashTransform = m.ShotFlashPosition;
 
-                _useBooster          = m.UseBooster ?? false;
-                _useThrustDelayTimer = m.UseThrustDelayTimer ?? false;
+                _useBooster          = m.UseBooster;
+                _useThrustDelayTimer = m.UseThrustDelayTimer;
                 _purgeVector = m.PurgeVector != null
                     ? new Vector3(m.PurgeVector.x, m.PurgeVector.y, m.PurgeVector.z)
                     : Vector3.forward;
-                _purgePower  = m.PurgePower ?? 0f;
+                _purgePower  = m.PurgePower;
 
                 _hitSoundNames.Clear();
                 if (m.HitSounds != null)
