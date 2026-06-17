@@ -1,6 +1,6 @@
 # ACMu 実装進捗 — セッション引き継ぎメモ
 
-最終更新: 2026-06-16 (M5 完了)
+最終更新: 2026-06-17 (M5 実機確認 途中 / 二重爆発バグ修正)
 
 ---
 
@@ -79,26 +79,57 @@ Adapter / Host 基盤 (`ILog` `IGameSessionInfo` `IGameEventSource` `IBlockAcces
 
 | 機能 | 理由 |
 |---|---|
-| `Attaches = true` | 着弾時 Despawn 抑止 API が IProjectileService に存在しない。契約変更が必要 |
 | ミサイル誘導 (useBeacon / GuidRatio / GuidType) | M6 スコープ |
-| useBooster / useThrustDelayTimer | M6 スコープ |
-| useMagazine / マガジン弾倉システム | M6 スコープ |
 | エフェクト / メッシュ (ECannon.xml) | ゲーム側に Mod.xml リソース登録が必要。テスト環境で手動設定後に有効化 |
+| `AdBlockProp` (BlockPhysicsModule) | **契約変更が必要**。ConfigurableJoint/SpringMotion/RotateMotion/サブオブジェクト差し替え等を持つ汎用ブロック物理モジュールで、Weapons系のIWeaponHost/IWeaponRegistryとは無関係。現在のCore/PluginApiには武装(発射)以外のBlockModuleをホストする契約が一切無い(IBlockAccessorは値の読み取りのみ)。ROADMAP.mdにもM0~M6の範囲外で、対応するマイルストーンが存在しない。新規Core契約(例: 汎用BlockModuleホスト)の設計が必要なため実装着手せず停止。次セッションで設計セッションとして起こすことを推奨 |
+
+---
+
+## ShootingModule 追加機能(2026-06-16、M5後の追加セッション)
+
+ユーザー指定の優先順で全6項目を実装。ビルド警告0・エラー0で確認済み(実機確認は未)。
+
+| 機能 | 実装場所 | 注記 |
+|---|---|---|
+| useMagazine(装弾数/リロード) | `MagazineState.cs`(新規)、`OldCannonModule`/`OldCannonWeapon` | `docs/ACM/magazine-system.md` で確証済み。初期化: `AmmoLeft=min(DefaultAmmo,Capacity)`,`AmmoStock=残り`。補充: `min(AmmoStock, Capacity-AmmoLeft)`。未対応: `MagazineCapacitySlider.ValueChanged` での整数スナップUI(UIの見た目のみ、読み取り時は `RoundToInt` で機能的に同等) |
+| useBooster + useThrustDelayTimer | `ProjectileBoosterBehaviour.cs`(新規,旧ProjectileBoosterTimer置換)、`OldCannonModule`/`OldCannonHostBehaviour` | `docs/ACM/missile-behavior.md` §5,§7で確証済み。`useBooster=true`でスラスターシステム全体有効: パージ(`AddRelativeForce(PurgeVector × PurgePower × 100f)`)+横方向安定ドラッグ(WingDragBehavour2相当)+連続前方推力(`AddForce(forward × PowerSlider.Value × 100f)` / FixedUpdate毎)。`useThrustDelayTimer`は点火遅延時間のみ制御(false=即時点火)。`boosterPower = PowerSlider.Value`(原ACM互換)。DragPrefab2実体Prefabは原ACMアセット依存のため生成不可。横方向ドラッグのみコードで再現 |
+| 衝突有効化遅延 | `ProjectilePhysicsSetup.cs` | 発射後0.02秒間コライダー無効化(固定値、XMLキーなし) |
+| 接着効果(Attaches) | `OldCannonWeapon.OnImpact`/`OldCannonHostBehaviour.AttachProjectile` | 契約変更不要と判明: `IProjectileService.TryGetGameObject` + 既存の寿命タイムアウト(`LifetimeCoroutine`)で十分。Despawn時に親子関係を復元するハンドラを追加 |
+| 凍結効果 | `FreezeRegistry.cs`(新規,Compat)、`FreezeApplierAdapter.cs`(新規,Adapter)、`OldCannonModule.UseFreezingAttack` | `docs/decompiled/{BlockBehaviour,IceTag,BlockPrefab}.cs` から確認したネイティブ凍結アルゴリズム(`gotChildBlocks`→`CreateSimLists`→子の`canFreeze`→`iceTag.Freeze()`、自身も同様)をAdapterで再現。XMLキー名は **`useFreezingAttack`**(`docs/XML/ACMモジュール.xml` 287行で確証済み)。`ShootingState` ではなく `AdShootingProp` 直下のトップレベルフィールドだったため `OldCannonModule` 側に実装し直した |
+| 跳弾効果 | (削除済み) | 原ACMには専用フラグが存在しないと判明(`docs/XML/ACMモジュール.xml` 176-179行: 跳弾は `BounceStr`/`BounceCombineType` の PhysicMaterial bounciness のみで実現)。一旦 `ShootingState.Deflectable`+`Vector3.Reflect` として実装したが、誤認防止のためユーザー判断で削除。`BounceStr`/`BounceCombineType` は元から実装済みなので機能的な欠落はない |
+
+### 停止した項目
+
+`AdBlockProp` 新規モジュール着手(ユーザー指定の「時間が余れば」項目)は、上表の通り契約変更が必要なため着手せず停止。
 
 ---
 
 ## 実機確認が必要な項目 (M5)
 
-- [ ] ECannon ブロックが Besiege で選択・配置できる
-- [ ] C キーで発射できる (hold-to-shoot)
-- [ ] 弾体が重力に従い飛翔し、3 秒後にタイムフューズ爆発する (`useTimefuse=true`)
-- [ ] 20 発で弾切れになる (`DefaultAmmo=20`)
-- [ ] リコイルでブロックが後退する (`RecoilMultiplier=0.8`)
-- [ ] 複数発の弾道が微妙にバラける (`RandomDiffusion=0.007`)
-- [ ] `useBurstShot=true` に変更したとき 3 発バーストになる
-- [ ] `useDelay=true` に変更したとき弾体スポーンが 0.1 秒遅延する
-- [ ] カプセルコライダー(弾頭)が壁に当たって衝突判定が取れる
-- [ ] MP: 弾体スポーン・フューズ爆発がホスト・クライアント双方で見える
+- [x] ECannon ブロックが Besiege で選択・配置できる
+- [x] C キーで発射できる (hold-to-shoot)
+- [x] 弾体が重力に従い飛翔し、3 秒後にタイムフューズ爆発する (`useTimefuse=true`)
+- [x] 20 発で弾切れになる (`DefaultAmmo=20`)
+- [x] リコイルでブロックが後退する (`RecoilMultiplier=0.8`)
+- [x] 複数発の弾道が微妙にバラける (`RandomDiffusion=0.007`)
+- [x] `useBurstShot=true` に変更したとき 3 発バーストになる
+- [x] `useDelay=true` に変更したとき弾体スポーンが遅延する
+- [ ] カプセルコライダー(弾頭)が壁に当たって衝突判定が取れる (未確認・おそらくOK)
+- [ ] MP: 弾体スポーン・フューズ爆発がホスト・クライアント双方で見える (未確認)
+
+### 実機確認が必要な項目(追加機能)
+
+- [x] `useMagazine=true` で、装弾数が尽きると自動/手動リロードが発生し、リロード中は発射できない
+- [x] `useBooster=true` で発射直後にパージ推力がかかり加速・直進する(横方向安定=フィン効果も確認済み)
+- [x] `useThrustDelayTimer=true` でパージ後に点火遅延が発生し、点火後に推力開始する
+- [ ] ECannon.xml: PowerSlider が連続推力の大きさを兼ねていることを確認 (未確認)
+- [ ] 発射直後の0.02秒間、弾頭が発射元ブロックに自爆判定しない(衝突有効化遅延) (未確認)
+- [ ] `ShootingState.Attaches=true` で、命中対象に弾が刺さって止まり、シミュ終了時にクラッシュしない (未確認)
+- [ ] `useFreezingAttack=true` で、命中したブロック(と子ブロック)が凍結する (未確認)
+
+### 修正済みバグ (2026-06-17)
+
+- **二重爆発バグ**: `ProjectilesExplode=true` + `ProjectilesDespawnImmediately=false` の弾体が衝突後も GO が残り、タイムフューズでも爆発していた。`OldCannonWeapon.OnImpact` で `_projectilesExplode=true` のときも `Despawn(Impact)` するよう修正。`ProjectileFuseTimer.OnDisable` でフューズがキャンセルされ二重爆発が解消。
 
 ---
 
