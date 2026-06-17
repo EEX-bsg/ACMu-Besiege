@@ -11,6 +11,13 @@
         <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.10" max="1.00" default="0.37" unclamped="false" />
         <Slider displayName="Fuse Timer" key="fuse-timer" min="0.5" max="10.0" default="3.0" unclamped="false" />
         <Toggle displayName="Hold To Shoot" key="hold-to-shoot" default="true" />
+        <!-- useMagazine テスト用 -->
+        <Key displayName="Reload" key="reload" default="R" />
+        <Toggle displayName="Auto Reload" key="auto-reload" default="false" />
+        <Slider displayName="Magazine Capacity" key="magazine-capacity" min="1" max="20" default="5" unclamped="false" />
+        <Slider displayName="Reload Time" key="reload-time" min="0.2" max="5.0" default="1.5" unclamped="false" />
+        <!-- useThrustDelayTimer テスト用 -->
+        <Slider displayName="Thrust Delay Timer" key="thrust-delay-timer" min="0.0" max="3.0" default="0.5" unclamped="false" />
     </ModuleMapperTypes>
 
     <Modules>
@@ -23,6 +30,8 @@
                 <IgnoreGravity>False</IgnoreGravity>
                 <EntityDamage>40</EntityDamage>
                 <BlockDamage>10000.0</BlockDamage>
+                <!-- 接着効果: true にすると着弾した弾が対象に刺さって止まる(Despawnは寿命タイムアウト任せ) -->
+                <Attaches>false</Attaches>
                 <CollisionTypeS>ContinuousDynamic</CollisionTypeS>
                 <!-- BounceStr>0 でプロジェクタイルが跳ねる。ゼロなら PhysicMaterial 無効 -->
                 <BounceCombineType>Maximum</BounceCombineType>
@@ -76,13 +85,39 @@
             <RandomFuseInterval>0.0</RandomFuseInterval>
 
             <!-- バーストショット: false で通常、true で BurstShotNum 発連射 -->
-            <useBurstShot>true</useBurstShot>
+            <useBurstShot>false</useBurstShot>
             <RateOfBurst>4.0</RateOfBurst>
             <BurstShotNum>3</BurstShotNum>
 
             <!-- スポーン遅延 -->
-            <useDelay>true</useDelay>
+            <useDelay>false</useDelay>
             <DelayTime>1.0</DelayTime>
+
+            <!-- 凍結効果: true にすると命中対象(と子ブロック)を凍結する。凍結非対応ブロックでは無反応 -->
+            <useFreezingAttack>false</useFreezingAttack>
+
+            <!-- ブースター: useBooster=trueで発射時に必ずパージ推力が掛かる -->
+            <useBooster>false</useBooster>
+            <!-- 再着火: useBooster かつ useThrustDelayTimer=true のときのみ、ThrustDelayTimerSlider秒後に同じ推力をもう一度掛ける -->
+            <useThrustDelayTimer>false</useThrustDelayTimer>
+            <ThrustDelayTimerSlider key="thrust-delay-timer" />
+            <PurgeVector x="0.0" y="0.0" z="1.0" />
+            <PurgePower>30.0</PurgePower>
+
+            <!-- マガジン/リロード: true で DefaultAmmo を MagazineCapacity 単位の弾倉として管理する -->
+            <useMagazine>true</useMagazine>
+            <MagazineInfo>
+                <useReloadKey>true</useReloadKey>
+                <ReloadKey key="reload" />
+                <forceAutoReload>true</forceAutoReload>
+                <useAutoReloadToggle>false</useAutoReloadToggle>
+                <AutoReloadToggle key="auto-reload" />
+                <MagazineCapacitySlider key="magazine-capacity" />
+                <ReloadTimeSlider key="reload-time" />
+                <ReloadSounds>
+                    <AudioClip name="reload" />
+                </ReloadSounds>
+            </MagazineInfo>
 
             <!-- 物理 -->
             <RecoilMultiplier>0.8</RecoilMultiplier>

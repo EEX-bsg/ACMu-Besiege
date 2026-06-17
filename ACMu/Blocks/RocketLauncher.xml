@@ -1,0 +1,154 @@
+<Block>
+    <Debug>true</Debug>
+    <ID>3</ID>
+    <Name>RocketLauncher (ACMu)</Name>
+    <Mass>0.5</Mass>
+    <Fallback>Cannon</Fallback>
+
+    <ModuleMapperTypes>
+        <Key    displayName="Shot"              key="fire"               default="C"    />
+        <Slider displayName="Power"             key="power"              min="8"   max="8"   default="8"   unclamped="false" />
+        <Slider displayName="Rate Of Fire"      key="rate-of-fire"       min="0.5" max="0.5" default="0.5" unclamped="false" />
+        <Slider displayName="Fuse Timer"        key="fuse-timer"         min="5"   max="5"   default="5"   unclamped="false" />
+        <Slider displayName="Magazine Capacity" key="magazine-capacity"  min="2"   max="2"   default="2"   unclamped="false" />
+        <Slider displayName="Reload Time"       key="reload-time"        min="10"  max="10"  default="10"  unclamped="false" />
+        <Slider displayName="Thrust Delay"      key="thrust-delay-timer" min="0"   max="2"   default="0.5" unclamped="false" />
+        <Toggle displayName="Hold To Shoot"     key="hold-to-shoot"      default="true" />
+    </ModuleMapperTypes>
+
+    <Modules>
+        <AdShootingProp modid="e2650bb4-7195-42a8-93c4-bdab66f5b571">
+
+            <ShootingState>
+                <Mass>0.5</Mass>
+                <Drag>0.0</Drag>
+                <AngularDrag>0.0</AngularDrag>
+                <IgnoreGravity>false</IgnoreGravity>
+                <EntityDamage>40</EntityDamage>
+                <BlockDamage>0.3</BlockDamage>
+                <Attaches>false</Attaches>
+                <CollisionTypeS>ContinuousDynamic</CollisionTypeS>
+                <BounceCombineType>Maximum</BounceCombineType>
+                <BounceStr>0.0</BounceStr>
+                <FrictionCombineType>Average</FrictionCombineType>
+                <FrictionStr>0.0</FrictionStr>
+                <Colliders>
+                    <CapsuleCollider>
+                        <Position x="0.0" y="0.0" z="0.0" />
+                        <Capsule direction="Z" radius="0.2" height="2.0" />
+                    </CapsuleCollider>
+                </Colliders>
+                <!-- 100mmShell をロケット弾体に流用。登録済みメッシュのみ使用可 -->
+                <Mesh name="100mmShell">
+                    <Position x="0.0" y="0.0" z="0.0" />
+                    <Rotation x="0.0" y="180.0" z="0.0" />
+                    <Scale x="1.5" y="1.5" z="4.0" />
+                </Mesh>
+                <Texture name="metal" />
+            </ShootingState>
+
+            <FireKey key="fire" />
+            <PowerSlider key="power" />
+            <RateOfFireSlider key="rate-of-fire" />
+
+            <ProjectileStart>
+                <Position x="0.0" y="-0.2" z="0.5" />
+                <Rotation x="90.0" y="0.0" z="0.0" />
+                <Scale x="1.0" y="1.0" z="1.0" />
+            </ProjectileStart>
+
+            <ShotFlashPosition>
+                <Position x="0.0" y="-0.2" z="0.5" />
+                <Rotation x="90.0" y="0.0" z="0.0" />
+                <Scale x="1.0" y="1.0" z="1.0" />
+            </ShotFlashPosition>
+
+            <ProjectilesExplode>true</ProjectilesExplode>
+            <ExplodeRadius>3.0</ExplodeRadius>
+            <ExplodePower>7000.0</ExplodePower>
+            <ExplodeUpPower>-5.0</ExplodeUpPower>
+            <ProjectilesDespawnImmediately>false</ProjectilesDespawnImmediately>
+
+            <!-- タイムフューズ: スライダーが固定値 5 秒。衝突しなければ 5 秒で爆発 -->
+            <useTimefuse>true</useTimefuse>
+            <FuseTime>5.0</FuseTime>
+            <FuseDelayTime>0.0</FuseDelayTime>
+            <RandomFuseInterval>0.0</RandomFuseInterval>
+
+            <useBurstShot>false</useBurstShot>
+            <RateOfBurst>4.0</RateOfBurst>
+            <BurstShotNum>1</BurstShotNum>
+
+            <useDelay>false</useDelay>
+            <DelayTime>0.0</DelayTime>
+
+            <useFreezingAttack>false</useFreezingAttack>
+
+            <!-- ブースター: パージ(前方 z=1) + 点火遅延 0.5s 後に連続推力 -->
+            <useBooster>true</useBooster>
+            <useThrustDelayTimer>true</useThrustDelayTimer>
+            <ThrustDelayTimerSlider key="thrust-delay-timer" />
+            <PurgeVector x="0.0" y="0.0" z="1.0" />
+            <PurgePower>0.5</PurgePower>
+
+            <!-- マガジン: 2 発装填 / 自動リロード 10 秒 -->
+            <useMagazine>true</useMagazine>
+            <MagazineInfo>
+                <useReloadKey>false</useReloadKey>
+                <forceAutoReload>true</forceAutoReload>
+                <useAutoReloadToggle>false</useAutoReloadToggle>
+                <MagazineCapacitySlider key="magazine-capacity" />
+                <ReloadTimeSlider key="reload-time" />
+            </MagazineInfo>
+
+            <RecoilMultiplier>0.6</RecoilMultiplier>
+            <RandomInterval>0.0</RandomInterval>
+            <RandomDiffusion>0.0</RandomDiffusion>
+
+            <!-- エフェクト: myasset バンドル内のものを使用。存在しなければ無音・無エフェクトで動作 -->
+            <AssetBundleName name="myasset" />
+            <ExplodeEffect>APFSDShit</ExplodeEffect>
+            <ShotFlashEffect>ShotEffectMB</ShotFlashEffect>
+            <TrailEffect>none</TrailEffect>
+            <BulletEffect>MissileEffect</BulletEffect>
+
+            <DefaultAmmo>10</DefaultAmmo>
+            <PoolSize>20</PoolSize>
+
+            <Sounds>
+                <AudioClip name="shot" />
+            </Sounds>
+            <HitSounds>
+                <AudioClip name="hit" />
+            </HitSounds>
+
+        </AdShootingProp>
+    </Modules>
+
+    <!-- TestCannon メッシュをランチャー外装に流用 -->
+    <Mesh name="TestCannon">
+        <Position x="0.0" y="0.0" z="0.5" />
+        <Rotation x="0.0" y="90.0" z="90.0" />
+        <Scale x="1.0" y="1.0" z="1.0" />
+    </Mesh>
+    <Texture name="metal" />
+
+    <Icon>
+        <Position x="0.0" y="0.0" z="0.0" />
+        <Rotation x="60.0" y="120.0" z="120.0" />
+        <Scale x="2.0" y="2.0" z="2.0" />
+    </Icon>
+
+    <Colliders>
+        <BoxCollider>
+            <Position x="0.0" y="0.0" z="0.5" />
+            <Rotation x="0.0" y="0.0" z="0.0" />
+            <Scale x="0.5" y="0.5" z="1.0" />
+        </BoxCollider>
+    </Colliders>
+
+    <BasePoint hasAddingPoint="false">
+        <Stickiness enabled="true" radius="0.6" />
+        <Motion x="false" y="false" z="false" />
+    </BasePoint>
+</Block>

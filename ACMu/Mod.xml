@@ -91,6 +91,7 @@ A newly created mod. <!-- FIX: Insert a short description here. -->
 	<Blocks>
 		<Block path="Blocks/TestCannon.xml" />
 		<Block path="Blocks/ECannon.xml" />
+		<Block path="Blocks/RocketLauncher.xml" />
 	</Blocks>
 	
 	<!-- Any entities (level objects) your mod adds to the game.
