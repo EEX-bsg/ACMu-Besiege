@@ -44,7 +44,7 @@ namespace ACMu.Compat.Shooting
 
         [XmlElement("ProjectilesExplode")]
         [DefaultValue(false)]
-        public bool ProjectilesExplode = true;
+        public bool ProjectilesExplode = false;
 
         [XmlElement("ExplodeRadius")]
         [DefaultValue(3f)]

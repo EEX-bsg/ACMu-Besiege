@@ -12,9 +12,10 @@ namespace ACMu.Compat.Shooting
         [XmlElement("EntityDamage")]  public float EntityDamage  = 100f;
         [XmlElement("BlockDamage")]   public float BlockDamage   = 1f;
         [XmlElement("Attaches")]      public bool  Attaches      = false;
+
         [XmlElement("CollisionTypeS")] public string CollisionTypeS = "ContinuousDynamic";
 
-        // PhysicMaterial — bounce
+        // PhysicMaterial — bounce(跳弾効果はこの bounciness のみで実現される。原ACMに専用フラグは存在しない: docs/XML/ACMモジュール.xml 176-179行)
         [XmlElement("BounceCombineType")] public string BounceCombineType = "Average";
         [XmlElement("BounceStr")]         public float  BounceStr         = 0f;
 

@@ -9,11 +9,17 @@ namespace ACMu.Compat.Shooting
     // OnDisable(プール返却)でコライダー状態を復元し、OnEnable(次の発射)で再適用する。
     internal sealed class ProjectilePhysicsSetup : MonoBehaviour
     {
+        // 発射直後、自機/発射元への即時誤爆を防ぐためコライダーを無効化しておく時間(原ACM互換固定値)
+        private const float ColliderEnableDelay = 0.02f;
+
         private ShootingState _config;
         private Collider _originalCollider;
         private readonly List<Collider> _addedColliders = new List<Collider>();
         private PhysicMaterial _physicMat;
         private bool _collidersApplied;
+
+        private bool  _colliderEnableDelayActive;
+        private float _colliderEnableElapsed;
 
         internal void Configure(ShootingState state)
         {
@@ -29,10 +35,27 @@ namespace ACMu.Compat.Shooting
             }
 
             ApplyPhysicMaterial();
+
+            SetActiveColliders(false);
+            _colliderEnableElapsed = 0f;
+            _colliderEnableDelayActive = true;
+        }
+
+        void Update()
+        {
+            if (!_colliderEnableDelayActive) return;
+            _colliderEnableElapsed += Time.deltaTime;
+            if (_colliderEnableElapsed >= ColliderEnableDelay)
+            {
+                _colliderEnableDelayActive = false;
+                SetActiveColliders(true);
+            }
         }
 
         void OnDisable()
         {
+            _colliderEnableDelayActive = false;
+
             // カスタムコライダーを無効化してオリジナルを復元
             if (_addedColliders.Count > 0)
             {
@@ -52,6 +75,20 @@ namespace ACMu.Compat.Shooting
                 foreach (var col in _addedColliders)
                     if (col != null) col.enabled = true;
             }
+        }
+
+        // 現在有効化されているべきコライダー群(カスタム優先、無ければ素体)に enabled を適用
+        private void SetActiveColliders(bool active)
+        {
+            if (_addedColliders.Count > 0)
+            {
+                foreach (var added in _addedColliders)
+                    if (added != null) added.enabled = active;
+                return;
+            }
+
+            Collider baseCollider = _originalCollider != null ? _originalCollider : GetComponent<Collider>();
+            if (baseCollider != null) baseCollider.enabled = active;
         }
 
         private void ApplyRigidbody()
