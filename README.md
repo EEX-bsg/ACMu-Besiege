@@ -1,4 +1,4 @@
-# ACMu (AddCustomModule unofficial
+# ACMu (AddCustomModule unofficial)
 
 ACMu は Besiege Mod「AddCustomModule」の非公式フォークModです。
 武装プラグインAPIや、ボーダーレスワールド基盤等を開発しています。
