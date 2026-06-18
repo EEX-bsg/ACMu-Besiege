@@ -1,0 +1,42 @@
+name: タスク
+description: 実装、整理、AI への作業引き継ぎ用です。
+title: "タスク: "
+labels: []
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: やること
+      description: 目的、背景、触りそうな場所をまとめて書いてください。
+      placeholder: |
+        目的:
+        背景:
+        触る範囲:
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      placeholder: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: 確認すること
+      description: ビルド、依存規律、Besiege 実機確認など。不要なら「なし」。
+      placeholder: |
+        - [ ] ビルド
+        - [ ] 実機確認
+    validations:
+      required: false
+  - type: textarea
+    id: stop
+    attributes:
+      label: 停止条件・注意
+      description: 契約変更、設計判断、触ってはいけない範囲など。
+    validations:
+      required: false

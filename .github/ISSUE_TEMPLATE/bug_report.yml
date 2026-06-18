@@ -1,0 +1,36 @@
+name: バグ報告
+description: 壊れている挙動、または想定外の挙動を記録します。
+title: "バグ: "
+labels: []
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 何が起きたか
+      description: 短く書いてください。分かる範囲で十分です。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順・状況
+      description: SP/MP、ホスト/クライアント、使ったブロックや設定もここにまとめてください。
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: 本来どうなってほしいか
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: ログ・補足
+      description: 関連ログ、スクリーンショット、推測など。
+    validations:
+      required: false

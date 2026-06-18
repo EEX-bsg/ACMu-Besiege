@@ -142,7 +142,7 @@ Adapter / Host 基盤 (`ILog` `IGameSessionInfo` `IGameEventSource` `IBlockAcces
 
 ### git コミット (PowerShell)
 ```powershell
-git -c user.name="EEX-bsg" -c user.email="exendra314@gmail.com" commit -m @'
+git -c user.name="ユーザー名" -c user.email="mail@example.com" commit -m @'
 コミットメッセージ
 '@
 ```

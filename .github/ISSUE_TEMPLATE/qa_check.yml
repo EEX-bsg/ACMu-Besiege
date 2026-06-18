@@ -1,0 +1,31 @@
+name: QA 確認
+description: Besiege 実機や手動確認の記録用です。
+title: "QA: "
+labels: []
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: 確認すること
+      description: 何を確認したいか、どのブロック/設定かを書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 手順
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: false
+  - type: textarea
+    id: pass
+    attributes:
+      label: 合格条件・結果
+      placeholder: |
+        - [ ] 
+        結果:
+    validations:
+      required: true

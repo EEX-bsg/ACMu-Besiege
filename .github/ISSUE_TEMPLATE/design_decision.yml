@@ -1,0 +1,31 @@
+name: 設計判断
+description: 実装前に判断が必要な項目です。
+title: "設計: "
+labels: []
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 決めたいこと
+      description: 何を決める必要があるかを書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・選択肢
+      description: 制約、選択肢、影響範囲をまとめてください。粗くて構いません。
+      placeholder: |
+        背景:
+        A)
+        B)
+        影響:
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 決定メモ
+      description: 決まった後に追記します。
+    validations:
+      required: false
