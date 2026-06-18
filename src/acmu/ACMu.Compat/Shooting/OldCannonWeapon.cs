@@ -226,7 +226,7 @@ namespace ACMu.Compat.Shooting
 
             float rateOfFire;
             if (!_useBurstShot && Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out rateOfFire))
-                Host.BaseSpec.FireIntervalSeconds = rateOfFire;
+                Host.BaseSpec.FireIntervalSeconds = rateOfFire > 0f ? 1f / rateOfFire : _savedInterval;
 
             // バースト残弾カウント処理: バースト完了時、通常レート分のクールダウンを設定
             if (_useBurstShot && _burstRemaining > 0)
@@ -235,7 +235,10 @@ namespace ACMu.Compat.Shooting
                 if (_burstRemaining == 0)
                 {
                     float normalInterval;
-                    if (!Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out normalInterval))
+                    float rofSlider;
+                    if (Host.Block.TryGetSlider(OldCannonModule.RateOfFireSliderName, out rofSlider))
+                        normalInterval = rofSlider > 0f ? 1f / rofSlider : _savedInterval;
+                    else
                         normalInterval = _savedInterval;
                     Host.BaseSpec.FireIntervalSeconds = normalInterval;
                     _burstCooldownUntil = Time.time + normalInterval;

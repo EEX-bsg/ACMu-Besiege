@@ -175,6 +175,11 @@ namespace ACMu.Compat.Shooting
                 var physics = projGo.GetComponent<ProjectilePhysicsSetup>();
                 if (physics == null) physics = projGo.AddComponent<ProjectilePhysicsSetup>();
                 physics.Configure(m.Shooting);
+
+                // スライダーが設定されていれば ShootingState.Mass を上書き
+                float massSlider;
+                if (rb != null && Block.TryGetSlider(OldCannonModule.MassSliderName, out massSlider) && massSlider > 0f)
+                    rb.mass = massSlider;
             }
 
             // ---- 弾頭メッシュ/テクスチャ ----

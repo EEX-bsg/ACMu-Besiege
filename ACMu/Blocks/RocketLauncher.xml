@@ -9,6 +9,7 @@
         <Key    displayName="Shot"              key="fire"               default="C"    />
         <Slider displayName="Power"             key="power"              min="8"   max="8"   default="8"   unclamped="false" />
         <Slider displayName="Rate Of Fire"      key="rate-of-fire"       min="0.5" max="0.5" default="0.5" unclamped="false" />
+        <Slider displayName="Bullet Mass"       key="bullet-mass"        min="0.01" max="5.0" default="0.5" unclamped="false" />
         <Slider displayName="Fuse Timer"        key="fuse-timer"         min="5"   max="5"   default="5"   unclamped="false" />
         <Slider displayName="Magazine Capacity" key="magazine-capacity"  min="2"   max="2"   default="2"   unclamped="false" />
         <Slider displayName="Reload Time"       key="reload-time"        min="10"  max="10"  default="10"  unclamped="false" />
@@ -50,6 +51,7 @@
             <FireKey key="fire" />
             <PowerSlider key="power" />
             <RateOfFireSlider key="rate-of-fire" />
+            <MassSlider key="bullet-mass" />
 
             <ProjectileStart>
                 <Position x="0.0" y="-0.2" z="0.5" />

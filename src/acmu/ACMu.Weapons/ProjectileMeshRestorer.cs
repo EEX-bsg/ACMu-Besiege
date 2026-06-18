@@ -46,7 +46,12 @@ namespace ACMu.Weapons
             var cmf = _childGo.GetComponent<MeshFilter>();
             var cmr = _childGo.GetComponent<MeshRenderer>();
             if (cmf != null) cmf.sharedMesh = mesh;
-            if (cmr != null && material != null) cmr.sharedMaterial = material;
+            if (cmr != null)
+            {
+                // material が null のときはレンダラーを無効にして Unity のデフォルト紫を防ぐ
+                cmr.enabled = material != null;
+                if (material != null) cmr.sharedMaterial = material;
+            }
             _childGo.SetActive(true);
         }
 

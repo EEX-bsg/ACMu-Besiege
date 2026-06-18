@@ -19,9 +19,14 @@ namespace ACMu.Compat.Shooting
         internal const string MagazineCapacitySliderName = "magazine-capacity";
         internal const string ReloadTimeSliderName        = "reload-time";
         internal const string ThrustDelayTimerSliderName  = "thrust-delay-timer";
+        internal const string MassSliderName              = "bullet-mass";
 
         [XmlElement("ShootingState")]
         public ShootingState Shooting = new ShootingState();
+
+        [XmlElement("MassSlider")]
+        [DefaultValue(null)]
+        public MSliderReference MassSlider;
 
         [XmlElement("FireKey")]
         public MKeyReference FireKey;

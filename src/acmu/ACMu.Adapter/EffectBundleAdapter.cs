@@ -239,9 +239,12 @@ namespace ACMu.Adapter
                     Texture2D tex2d = modTex;
                     if (tex2d != null)
                     {
-                        var shader = Shader.Find("Standard")
-                                  ?? Shader.Find("Legacy Shaders/Diffuse")
-                                  ?? Shader.Find("Unlit/Texture");
+                        // Standard は PBR 変数が Besiege ビルドでストリップされると紫になる。
+                        // Legacy Shaders/Diffuse を優先することで確実に動作するシェーダーを使う。
+                        var shader = Shader.Find("Legacy Shaders/Diffuse")
+                                  ?? Shader.Find("Diffuse")
+                                  ?? Shader.Find("Unlit/Texture")
+                                  ?? Shader.Find("Standard");
                         if (shader != null)
                         {
                             var mat = new Material(shader);
@@ -271,9 +274,10 @@ namespace ACMu.Adapter
                 var tex = mb.LoadAsset<Texture2D>(textureName);
                 if (tex != null)
                 {
-                    var shader = Shader.Find("Standard")
-                              ?? Shader.Find("Legacy Shaders/Diffuse")
-                              ?? Shader.Find("Unlit/Texture");
+                    var shader = Shader.Find("Legacy Shaders/Diffuse")
+                              ?? Shader.Find("Diffuse")
+                              ?? Shader.Find("Unlit/Texture")
+                              ?? Shader.Find("Standard");
                     if (shader != null)
                     {
                         var newMat = new Material(shader);

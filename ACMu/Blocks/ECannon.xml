@@ -9,6 +9,7 @@
         <Key displayName="Shot" key="fire" default="C" />
         <Slider displayName="Power" key="power" min="50" max="550" default="250" unclamped="false" />
         <Slider displayName="Rate Of Fire" key="rate-of-fire" min="0.10" max="1.00" default="0.37" unclamped="false" />
+        <Slider displayName="Bullet Mass" key="bullet-mass" min="0.01" max="5.0" default="0.6" unclamped="false" />
         <Slider displayName="Fuse Timer" key="fuse-timer" min="0.5" max="10.0" default="3.0" unclamped="false" />
         <Toggle displayName="Hold To Shoot" key="hold-to-shoot" default="true" />
         <!-- useMagazine テスト用 -->
@@ -57,6 +58,7 @@
             <FireKey key="fire" />
             <PowerSlider key="power" />
             <RateOfFireSlider key="rate-of-fire" />
+            <MassSlider key="bullet-mass" />
 
             <ProjectileStart>
                 <Position x="0.0" y="-8.5" z="0.5" />
