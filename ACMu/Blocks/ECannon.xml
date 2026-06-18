@@ -52,8 +52,6 @@
                 </Mesh>
 
                 <Texture name="metal" />
-                <Mesh name="none" />
-                <Texture name="none" />
             </ShootingState>
 
             <FireKey key="fire" />

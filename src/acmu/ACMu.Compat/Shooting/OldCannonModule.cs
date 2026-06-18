@@ -157,12 +157,18 @@ namespace ACMu.Compat.Shooting
         public string ExplodeEffect = "";
 
         [XmlElement("ShotFlashEffect")]
+        [DefaultValue(null)]
+        [CanBeEmpty]
         public string ShotFlashEffect = "";
 
         [XmlElement("TrailEffect")]
+        [DefaultValue(null)]
+        [CanBeEmpty]
         public string TrailEffect = "";
 
         [XmlElement("BulletEffect")]
+        [DefaultValue(null)]
+        [CanBeEmpty]
         public string BulletEffect = "";
 
         /// <summary>発射時に再生するAudioClipのリスト。複数指定するとランダム選択。</summary>

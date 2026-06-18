@@ -66,6 +66,10 @@ namespace ACMu.Host
             FreezeRegistry.SetApplyFn(FreezeApplierAdapter.ApplyFreeze);
             GameRulesRegistry.SetInfiniteAmmoFn(GameSessionInfoAdapter.IsInfiniteAmmoMode);
 
+            ProjectileDebugVisual.SetProviders(
+                BesiegeColliderVisuals.GetDebugMaterial,
+                BesiegeColliderVisuals.GetGridSpherePrefab);
+
             var effectLoader = go.AddComponent<EffectBundleAdapter>();
             EffectRegistry.SetFunctions(
                 effectLoader.Rent,

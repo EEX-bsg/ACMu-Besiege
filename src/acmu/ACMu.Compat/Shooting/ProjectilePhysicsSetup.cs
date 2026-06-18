@@ -149,6 +149,17 @@ namespace ACMu.Compat.Shooting
             }
         }
 
+        // カスタムコライダーが定義されていればそちらを返し、なければ素体コライダーを返す。
+        // ProjectileDebugVisual がデバッグ可視化の対象コライダーを特定するために使う。
+        internal Collider[] GetEffectiveColliders()
+        {
+            if (_addedColliders.Count > 0)
+                return _addedColliders.ToArray();
+            var col = GetComponent<Collider>();
+            if (col != null) return new Collider[] { col };
+            return new Collider[0];
+        }
+
         private static PhysicMaterialCombine ParseCombine(string s)
         {
             if (s == "Maximum")  return PhysicMaterialCombine.Maximum;
