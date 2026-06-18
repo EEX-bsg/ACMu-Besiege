@@ -23,6 +23,8 @@ namespace ACMu.Adapter
         private readonly Dictionary<string, int> _totalCounts = new Dictionary<string, int>();
         // レンタル中(アクティブ)のGO。ReturnAll 用
         private readonly List<GameObject> _rentedList = new List<GameObject>();
+        // poolKey ごとのエフェクトGO置き場(EffectPool の直下に並ぶ子コンテナ)。
+        private readonly Dictionary<string, Transform> _poolRoots = new Dictionary<string, Transform>();
         // "bundle/asset" → 読み込み済みメッシュ/マテリアル/サウンド (破棄しない)
         private readonly Dictionary<string, Mesh>      _meshCache     = new Dictionary<string, Mesh>();
         private readonly Dictionary<string, Material>  _materialCache = new Dictionary<string, Material>();
@@ -51,7 +53,14 @@ namespace ACMu.Adapter
             if (poolSize > cur) _poolSizes[key] = poolSize;
 
             Queue<GameObject> pool;
-            if (!_pools.TryGetValue(key, out pool)) { pool = new Queue<GameObject>(); _pools[key] = pool; }
+            if (!_pools.TryGetValue(key, out pool))
+            {
+                pool = new Queue<GameObject>();
+                _pools[key] = pool;
+                var root = new GameObject("[ACMu] " + key);
+                root.transform.SetParent(_poolRoot, false);
+                _poolRoots[key] = root.transform;
+            }
 
             GameObject go;
             if (pool.Count > 0)
@@ -82,7 +91,9 @@ namespace ACMu.Adapter
         internal void ReturnByKey(string poolKey, GameObject go)
         {
             if (go == null) return;
-            go.transform.SetParent(_poolRoot, false);
+            Transform effectRoot;
+            _poolRoots.TryGetValue(poolKey, out effectRoot);
+            go.transform.SetParent(effectRoot != null ? effectRoot : _poolRoot, false);
             go.transform.localPosition = Vector3.zero;
             go.transform.localRotation = Quaternion.identity;
             go.SetActive(false);
@@ -299,7 +310,9 @@ namespace ACMu.Adapter
             if (prefabGo == null) return null;
 
             var go = (GameObject)UnityEngine.Object.Instantiate(prefabGo);
-            go.transform.SetParent(_poolRoot, false);
+            Transform effectRoot;
+            _poolRoots.TryGetValue(key, out effectRoot);
+            go.transform.SetParent(effectRoot != null ? effectRoot : _poolRoot, false);
             go.SetActive(false);
 
             var ar = go.AddComponent<EffectAutoReturn>();

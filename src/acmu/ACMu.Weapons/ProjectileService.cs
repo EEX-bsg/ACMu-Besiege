@@ -27,6 +27,8 @@ namespace ACMu.Weapons
         // key ごとの弾体GO置き場(ProjectilePool の直下に並ぶ子コンテナ)。
         private readonly Dictionary<string, Transform> _poolRoots =
             new Dictionary<string, Transform>();
+        // EnsureTypePool で生成した型別プールのキー一覧。OnSimulationStop で破棄対象を特定する。
+        private readonly HashSet<string> _typePoolKeys = new HashSet<string>();
 
         // ホスト/SP: 生存弾
         private readonly Dictionary<int, GameObject> _active =
@@ -91,6 +93,25 @@ namespace ACMu.Weapons
                 DespawnProxy(id, DespawnReason.SimulationStopped);
 
             _activeOrder.Clear();
+
+            // 型別プール(EnsureTypePool 由来)を GO ごと破棄する。
+            // ベースプール(RegisterProjectile 由来)は維持。次のシミュ開始時に再生成される。
+            foreach (string typeKey in _typePoolKeys)
+            {
+                Queue<GameObject> pool;
+                if (_pools.TryGetValue(typeKey, out pool))
+                    pool.Clear();
+                Transform root;
+                if (_poolRoots.TryGetValue(typeKey, out root) && root != null)
+                    Destroy(root.gameObject);
+                _pools.Remove(typeKey);
+                _prefabs.Remove(typeKey);
+                _maxSizes.Remove(typeKey);
+                _totalCounts.Remove(typeKey);
+                _poolRoots.Remove(typeKey);
+            }
+            _typePoolKeys.Clear();
+
             _epoch++;
         }
 
@@ -153,6 +174,7 @@ namespace ACMu.Weapons
             var root = new GameObject("[ACMu] " + typeKey);
             root.transform.SetParent(_projectilePoolRoot, false);
             _poolRoots[typeKey] = root.transform;
+            _typePoolKeys.Add(typeKey);
 
             // PoolSize 分を事前生成(原ACM同様、戦闘中のアロケーションを避ける)。
             for (int i = 0; i < maxSize; i++)
