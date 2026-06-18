@@ -150,5 +150,5 @@ git -c user.name="ユーザー名" -c user.email="mail@example.com" commit -m @'
 ### ModIO名前空間の衝突
 `Modding.ModIO.ExistsFile()` — 完全修飾必須。
 
-### `CollisionTypeS` の大文字 S
-`<CollisionTypeS>ContinuousDynamic</CollisionTypeS>` — 末尾が大文字 S。旧 ACM XML は `<CollisionTypes>` だったが、ShootingState フィールド名に合わせて修正済み。
+### `CollisionTypes` の語尾問題
+`<CollisionTypes>ContinuousDynamic</CollisionTypes>` — 末尾が小文字 S。ShootingStateフィールド名では語尾が大文字だが修正案件。直っていなければ修正する必要あり。
