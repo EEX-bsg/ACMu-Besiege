@@ -68,7 +68,7 @@ ACMu.Host → [Modding.ModEntryPoint]
 | エラー方針 | 契約境界でtry-catch、機能単位フェイルソフト | Mod全体クラッシュ防止 | fail-fast | — |
 | エージェント運用 | Sonnet主体(実装+セルフレビュー)、Opusはマイルストーン境界のみ、実機検証は人間 | コスト制約(Fable/Opusほぼ不可) | Fable常駐レビュー | CLAUDE.mdのチェックリストでセルフレビューを機械化 |
 
-## 3. 司令塔§7への回答
+## 3. その他
 
 1. **カスタムモジュール実装方式**: BCMの`AddBlockModule`登録は維持しつつ、TBehaviourはACMuが提供する汎用ホスト(WeaponComponentBaseを生成・委譲する薄いBlockModuleBehaviour)に固定する。プラグインはXMLモジュール定義+WeaponComponentBase継承+Register呼び出しの3点のみ書く。旧版互換モジュールはCompat層がこのAPI上で再実装し、新版モジュールも同一APIで実装する。
 
