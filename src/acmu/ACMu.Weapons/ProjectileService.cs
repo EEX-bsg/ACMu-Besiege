@@ -52,6 +52,7 @@ namespace ACMu.Weapons
         private int _epoch;
         private ILog _log;
         private IGameSessionInfo _session;
+        private IGameEventSource _events;
         // 全弾体GOの格納先。ACMUcore の子として生成されるため DontDestroyOnLoad 不要。
         private Transform _projectilePoolRoot;
 
@@ -62,17 +63,22 @@ namespace ACMu.Weapons
 
         public int InitOrder { get { return 300; } }
 
-        internal void InitializeService(ILog log, IGameSessionInfo session)
+        internal void InitializeService(ILog log, IGameSessionInfo session, IGameEventSource events)
         {
             _log     = log;
             _session = session;
+            _events  = events;
 
             var poolGo = new GameObject("[ACMu] ProjectilePool");
             poolGo.transform.SetParent(transform, false);
             _projectilePoolRoot = poolGo.transform;
         }
 
-        public void OnModLoad() { }
+        public void OnModLoad()
+        {
+            if (_events != null)
+                _events.LevelLoaded += CleanupTypePools;
+        }
 
         public void OnSimulationStart(bool isMultiplayer)
         {
@@ -93,9 +99,13 @@ namespace ACMu.Weapons
                 DespawnProxy(id, DespawnReason.SimulationStopped);
 
             _activeOrder.Clear();
+            _epoch++;
+        }
 
-            // 型別プール(EnsureTypePool 由来)を GO ごと破棄する。
-            // ベースプール(RegisterProjectile 由来)は維持。次のシミュ開始時に再生成される。
+        // レベルロード時(シーンチェンジ)に呼ばれる。型別プール GO を破棄してメモリを解放する。
+        // ベースプール(RegisterProjectile 由来)は維持。次シミュ開始時に EnsureTypePool で再生成される。
+        private void CleanupTypePools()
+        {
             foreach (string typeKey in _typePoolKeys)
             {
                 Queue<GameObject> pool;
@@ -111,8 +121,6 @@ namespace ACMu.Weapons
                 _poolRoots.Remove(typeKey);
             }
             _typePoolKeys.Clear();
-
-            _epoch++;
         }
 
         public void RegisterProjectile(string key, GameObject prefab, int prewarmCount)

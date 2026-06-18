@@ -39,7 +39,7 @@ namespace ACMu.Host
             network.InitializeService(log, events, 1);
 
             var projectiles = go.AddComponent<ProjectileService>();
-            projectiles.InitializeService(log, session);
+            projectiles.InitializeService(log, session, events);
 
             var projSync = go.AddComponent<ProjectileSyncTransport>();
             projSync.InitializeService(log, session, network, projectiles);
