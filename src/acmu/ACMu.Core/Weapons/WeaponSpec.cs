@@ -28,6 +28,10 @@ namespace ACMu.Core.Weapons
         /// <summary>弾体寿命(秒)。0 以下は実装既定値。</summary>
         public float ProjectileLifetimeSeconds = 0f;
 
+        /// <summary>弾体プールの同時生存上限(ブロックタイプ単位)。0 以下は実装既定(プリウォーム値)を使う。
+        /// 上限到達時は最古の生存弾を再利用するため発射は止まらない。</summary>
+        public int PoolSize = 0;
+
         /// <summary>IProjectileService に登録した弾体キー。null は弾体を生成しない武装(セイバー等)。</summary>
         public string ProjectileKey = null;
 

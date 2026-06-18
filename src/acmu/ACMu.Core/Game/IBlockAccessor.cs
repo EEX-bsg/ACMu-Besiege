@@ -14,6 +14,17 @@ namespace ACMu.Core.Game
     public interface IBlockAccessor
     {
         Guid Guid { get; }
+
+        /// <summary>ブロック種類の名前(BlockPrefab.name)。全インスタンスで共有される型レベルの名前。
+        /// Mod ローカルの BlockID と違い、複数 Mod 間でのコリジョンリスクが低い。
+        /// 弾体プールをブロックタイプ単位で分離するキー素材および階層ラベルに用いる。</summary>
+        string BlockName { get; }
+
+        /// <summary>ブロックの種類ID(同一 Mod 構成なら全ピアで一致する。インスタンス単位の Guid とは別)。
+        /// <para>注意: Mod ローカルの ID であり、複数 Mod 間で値が重複する場合がある。
+        /// プール分離キーには BlockName の使用を推奨。</para></summary>
+        int BlockTypeId { get; }
+
         GameObject GameObject { get; }
 
         /// <summary>剛体。noRigidbody のブロックでは null。</summary>

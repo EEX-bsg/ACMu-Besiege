@@ -109,6 +109,18 @@ namespace ACMu.Weapons
             {
                 _services.Log.Error("[ACMu] WeaponHostBehaviour.NotifySimulationStart: " + ex.Message);
             }
+
+            // BaseSpec.PoolSize > 0 の武装はブロックタイプ別の弾体プールに切り替える。
+            // 全ピアの OnSimulateStart で同じ typeKey が生成されるため MP プロキシ側も同一キーを引ける。
+            if (_baseSpec.PoolSize > 0
+                && _baseSpec.ProjectileKey != null
+                && _projectileService != null)
+            {
+                string baseKey  = _baseSpec.ProjectileKey;
+                string typeKey  = _baseSpec.ProjectileKey + ":" + _block.BlockName;
+                _projectileService.EnsureTypePool(baseKey, typeKey, _baseSpec.PoolSize);
+                _baseSpec.ProjectileKey = typeKey;
+            }
         }
 
         public override void SimulateUpdateAlways()

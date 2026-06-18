@@ -46,6 +46,9 @@ namespace ACMu.Compat.Shooting
         // フューズ爆発デリゲート: OnSimulateStart で1回生成してキャッシュ
         private Action<ProjectileHandle> _fuseDelegate;
 
+        // ブロックのDebugVisuals設定。ModBlockBehaviour.ShowDebugVisuals からキャッシュ。
+        private bool _debugVisuals;
+
         public override Vector3 MuzzlePosition
         {
             get
@@ -128,6 +131,7 @@ namespace ACMu.Compat.Shooting
             _explosionRadius = BaseSpec != null ? BaseSpec.ExplosionRadius : 0f;
 
             _fuseDelegate = OnFuseExplosion;
+            _debugVisuals = ShowDebugVisuals;
         }
 
         public override void OnSimulateStop()
@@ -174,22 +178,32 @@ namespace ACMu.Compat.Shooting
             }
 
             // ---- 弾頭メッシュ/テクスチャ ----
-            if (m.Shooting != null)
+            // 素体プリミティブの球を必ず隠すため、メッシュ/テクスチャの読み込み可否に関わらず
+            // 常に restorer を付与して Apply する。読み込み失敗時は何も描画されない
+            // (球フォールバックしない)。
             {
-                string meshName    = m.Shooting.Mesh    != null ? m.Shooting.Mesh.Name    : "";
-                string textureName = m.Shooting.Texture != null ? m.Shooting.Texture.Name : "";
-                Mesh     mesh = EffectRegistry.LoadMesh(bundle, meshName);
-                Material mat  = EffectRegistry.LoadMaterial(bundle, textureName);
-                if (mesh != null || mat != null)
-                {
-                    var restorer = projGo.GetComponent<ProjectileMeshRestorer>();
-                    if (restorer == null) restorer = projGo.AddComponent<ProjectileMeshRestorer>();
+                var restorer = projGo.GetComponent<ProjectileMeshRestorer>();
+                if (restorer == null) restorer = projGo.AddComponent<ProjectileMeshRestorer>();
 
-                    Vector3    offset   = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetPosition() : Vector3.zero;
-                    Quaternion rotation = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetRotation() : Quaternion.identity;
-                    Vector3    scale    = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetScale()    : Vector3.one;
-                    restorer.Apply(mesh, mat, offset, rotation, scale);
+                Mesh       mesh     = null;
+                Material   mat      = null;
+                Vector3    offset   = Vector3.zero;
+                Quaternion rotation = Quaternion.identity;
+                Vector3    scale    = Vector3.one;
+
+                if (m.Shooting != null)
+                {
+                    string meshName    = m.Shooting.Mesh    != null ? m.Shooting.Mesh.Name    : "";
+                    string textureName = m.Shooting.Texture != null ? m.Shooting.Texture.Name : "";
+                    mesh = EffectRegistry.LoadMesh(bundle, meshName);
+                    mat  = EffectRegistry.LoadMaterial(bundle, textureName);
+
+                    offset   = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetPosition() : Vector3.zero;
+                    rotation = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetRotation() : Quaternion.identity;
+                    scale    = m.Shooting.Mesh != null ? m.Shooting.Mesh.GetScale()    : Vector3.one;
                 }
+
+                restorer.Apply(mesh, mat, offset, rotation, scale);
             }
 
             // ---- タイムフューズ ----
@@ -257,6 +271,12 @@ namespace ACMu.Compat.Shooting
                     bullet.transform.localRotation = Quaternion.identity;
                     _bulletGos[handle.Id] = bullet;
                 }
+            }
+
+            if (_debugVisuals)
+            {
+                try { ProjectileDebugVisual.Attach(projGo); }
+                catch (Exception ex) { Debug.LogError("[ACMu] ProjectileDebugVisual.Attach failed: " + ex.Message); }
             }
         }
 

@@ -95,6 +95,7 @@ namespace ACMu.Compat.Shooting
 
             Host.BaseSpec.Damage          = _entityDamage;
             Host.BaseSpec.ExplosionRadius = m.ProjectilesExplode ? m.ExplodeRadius : 0f;
+            Host.BaseSpec.PoolSize        = m.PoolSize;
             if (m.ProjectilesDespawnImmediately)
                 Host.BaseSpec.ProjectileLifetimeSeconds = 0.05f;
         }

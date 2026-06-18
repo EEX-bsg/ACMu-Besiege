@@ -18,6 +18,15 @@ namespace ACMu.Weapons
             new Dictionary<string, Queue<GameObject>>();
         private readonly Dictionary<string, GameObject> _prefabs =
             new Dictionary<string, GameObject>();
+        // key ごとの上限弾数(同時生存数の上限)。枯渇時はこの上限を超えず最古を再利用する。
+        private readonly Dictionary<string, int> _maxSizes =
+            new Dictionary<string, int>();
+        // key ごとの生成済みGO総数(プール内+生存中)。上限判定に使う。
+        private readonly Dictionary<string, int> _totalCounts =
+            new Dictionary<string, int>();
+        // key ごとの弾体GO置き場(ProjectilePool の直下に並ぶ子コンテナ)。
+        private readonly Dictionary<string, Transform> _poolRoots =
+            new Dictionary<string, Transform>();
 
         // ホスト/SP: 生存弾
         private readonly Dictionary<int, GameObject> _active =
@@ -26,6 +35,8 @@ namespace ACMu.Weapons
             new Dictionary<int, string>();
         private readonly Dictionary<int, WeaponSpec> _activeSpec =
             new Dictionary<int, WeaponSpec>();
+        // ホスト/SP: スポーン順のハンドルID。枯渇時に最古を強制リサイクルするために使う。
+        private readonly List<int> _activeOrder = new List<int>();
 
         // クライアント: プロキシ弾
         private readonly Dictionary<int, GameObject> _proxyGos =
@@ -79,6 +90,7 @@ namespace ACMu.Weapons
             foreach (int id in proxyIds)
                 DespawnProxy(id, DespawnReason.SimulationStopped);
 
+            _activeOrder.Clear();
             _epoch++;
         }
 
@@ -94,9 +106,58 @@ namespace ACMu.Weapons
             _prefabs[key] = prefab;
             var pool = new Queue<GameObject>();
             _pools[key] = pool;
+            _maxSizes[key]    = prewarmCount;
+            _totalCounts[key] = 0;
+
+            var root = new GameObject("[ACMu] " + key);
+            root.transform.SetParent(_projectilePoolRoot, false);
+            _poolRoots[key] = root.transform;
+
             for (int i = 0; i < prewarmCount; i++)
             {
                 var go = CreateProjectileGo(key, prefab);
+                go.SetActive(false);
+                pool.Enqueue(go);
+            }
+        }
+
+        // 武装側(WeaponHostBehaviour 経由)がシミュ開始時に呼ぶ。ブロックタイプ別の弾体プールを確保する。
+        // baseKey に登録済みのプレハブを流用し、typeKey 用のプールを生成・サイズ設定する。
+        // 全ピアのシミュ開始時に同じ typeKey で呼ばれるため、MP プロキシ受信側も同じプールを引ける。
+        // 既存 typeKey の場合は上限のみ引き上げる(同型ブロック複数設置に対応・下げはしない)。
+        internal void EnsureTypePool(string baseKey, string typeKey, int maxSize)
+        {
+            if (string.IsNullOrEmpty(typeKey) || maxSize <= 0) return;
+
+            if (_pools.ContainsKey(typeKey))
+            {
+                int cur;
+                _maxSizes.TryGetValue(typeKey, out cur);
+                if (maxSize > cur) _maxSizes[typeKey] = maxSize;
+                return;
+            }
+
+            GameObject prefab;
+            if (string.IsNullOrEmpty(baseKey) || !_prefabs.TryGetValue(baseKey, out prefab) || prefab == null)
+            {
+                if (_log != null) _log.Warn("[ACMu] EnsureTypePool: base prefab not found for key=" + baseKey);
+                return;
+            }
+
+            _prefabs[typeKey]     = prefab;
+            var pool              = new Queue<GameObject>();
+            _pools[typeKey]       = pool;
+            _maxSizes[typeKey]    = maxSize;
+            _totalCounts[typeKey] = 0;
+
+            var root = new GameObject("[ACMu] " + typeKey);
+            root.transform.SetParent(_projectilePoolRoot, false);
+            _poolRoots[typeKey] = root.transform;
+
+            // PoolSize 分を事前生成(原ACM同様、戦闘中のアロケーションを避ける)。
+            for (int i = 0; i < maxSize; i++)
+            {
+                var go = CreateProjectileGo(typeKey, prefab);
                 go.SetActive(false);
                 pool.Enqueue(go);
             }
@@ -122,17 +183,8 @@ namespace ACMu.Weapons
                 return ProjectileHandle.Invalid;
             }
 
-            GameObject go;
-            if (pool.Count > 0)
-            {
-                go = pool.Dequeue();
-            }
-            else
-            {
-                GameObject prefab;
-                _prefabs.TryGetValue(key, out prefab);
-                go = CreateProjectileGo(key, prefab);
-            }
+            GameObject go = AcquirePooledGo(key, pool);
+            if (go == null) return ProjectileHandle.Invalid;
 
             int ownerId = _session != null ? _session.LocalPlayerId : 0;
             var handle  = new ProjectileHandle(_nextId++, ownerId);
@@ -151,6 +203,7 @@ namespace ACMu.Weapons
             _active[handle.Id]     = go;
             _activeKey[handle.Id]  = key;
             _activeSpec[handle.Id] = request.Shot;
+            _activeOrder.Add(handle.Id);
 
             float lifetime = request.Shot.ProjectileLifetimeSeconds > 0f
                 ? request.Shot.ProjectileLifetimeSeconds
@@ -179,6 +232,7 @@ namespace ACMu.Weapons
 
             _active.Remove(handle.Id);
             _activeSpec.Remove(handle.Id);
+            _activeOrder.Remove(handle.Id);
             go.SetActive(false);
 
             string key;
@@ -225,8 +279,23 @@ namespace ACMu.Weapons
             Queue<GameObject> pool;
             if (!_pools.TryGetValue(key, out pool))
             {
-                if (_log != null) _log.Warn("[ACMu] ProxySpawn: unknown key=" + key);
-                return;
+                // typeKey ("baseKey:blockTypeId") がクライアント未登録の場合、baseKey から自動生成を試みる。
+                // 通常は OnSimulateStart で全ピアに登録済みのはずだが、タイミング差の保険として持つ。
+                int colon = key.LastIndexOf(':');
+                if (colon > 0)
+                {
+                    string baseKey = key.Substring(0, colon);
+                    int fallbackSize;
+                    _maxSizes.TryGetValue(baseKey, out fallbackSize);
+                    if (fallbackSize <= 0) fallbackSize = 32;
+                    EnsureTypePool(baseKey, key, fallbackSize);
+                    _pools.TryGetValue(key, out pool);
+                }
+                if (pool == null)
+                {
+                    if (_log != null) _log.Warn("[ACMu] ProxySpawn: unknown key=" + key);
+                    return;
+                }
             }
 
             GameObject prefab;
@@ -315,12 +384,69 @@ namespace ACMu.Weapons
 
         // ---- ユーティリティ ----
 
+        // プールから弾体GOを取り出す。
+        //  1) プールに空きGOがあれば再利用
+        //  2) 上限(_maxSizes = PoolSize)未満なら新規生成してプールを成長させる
+        //  3) 上限到達なら同キーの最古アクティブ弾を強制リサイクルしてそのGOを再利用する
+        // 無限増殖はしない / 球フォールバックもしない / 発射は止めない。
+        private GameObject AcquirePooledGo(string key, Queue<GameObject> pool)
+        {
+            if (pool.Count > 0)
+                return pool.Dequeue();
+
+            int total, maxSize;
+            _totalCounts.TryGetValue(key, out total);
+            _maxSizes.TryGetValue(key, out maxSize);
+
+            // 上限未満: プールを成長させる(PoolSize に達するまで)
+            if (total < maxSize)
+            {
+                GameObject prefab;
+                _prefabs.TryGetValue(key, out prefab);
+                return CreateProjectileGo(key, prefab);
+            }
+
+            // 上限到達(枯渇): 同キーの最古アクティブ弾を Despawn して GO をプールへ返し再利用
+            if (RecycleOldestActive(key) && pool.Count > 0)
+                return pool.Dequeue();
+
+            // 同キーのアクティブが存在しない異常時のみ新規生成(保険)
+            GameObject pf;
+            _prefabs.TryGetValue(key, out pf);
+            return CreateProjectileGo(key, pf);
+        }
+
+        // 同キーの最古アクティブ弾を1つ強制 Despawn する。見つかれば true。
+        private bool RecycleOldestActive(string key)
+        {
+            for (int i = 0; i < _activeOrder.Count; i++)
+            {
+                int id = _activeOrder[i];
+                string activeKey;
+                if (_active.ContainsKey(id)
+                    && _activeKey.TryGetValue(id, out activeKey)
+                    && activeKey == key)
+                {
+                    Despawn(new ProjectileHandle(id, 0), DespawnReason.Manual);
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private GameObject CreateProjectileGo(string key, GameObject prefab)
         {
             var go = Instantiate(prefab);
-            go.transform.SetParent(_projectilePoolRoot, false);
+            go.name = "[ACMu]Proj";
+            Transform poolParent;
+            _poolRoots.TryGetValue(key, out poolParent);
+            go.transform.SetParent(poolParent != null ? poolParent : _projectilePoolRoot, false);
             var body = go.GetComponent<ProjectileBody>();
             if (body == null) body = go.AddComponent<ProjectileBody>();
+
+            int total;
+            _totalCounts.TryGetValue(key, out total);
+            _totalCounts[key] = total + 1;
             return go;
         }
 

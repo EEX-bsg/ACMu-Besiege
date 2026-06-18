@@ -65,7 +65,7 @@ namespace ACMu.Adapter
                 int maxSize;
                 _poolSizes.TryGetValue(key, out maxSize);
 
-                // 上限到達: 負荷ゼロでスキップ
+                // 上限到達: 負荷ゼロでスキップ(エフェクト枯渇 → エフェクト非表示。これが正しい挙動)
                 if (total >= maxSize) return null;
 
                 go = CreateEffectGo(key, bundle, prefab);

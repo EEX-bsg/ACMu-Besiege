@@ -2,88 +2,59 @@ using UnityEngine;
 
 namespace ACMu.Weapons
 {
-    // プロジェクタイルGOに付けるコンポーネント。
-    // 武装ごとのカスタムメッシュ/マテリアルを適用し、プール返却時(SetActive(false) → OnDisable)に
-    // 元の状態を自動復元する。これにより次の武装が意図しない外観を引き継がない。
-    // offset/rotation/scale が非同一の場合は子GOを作成してそこにメッシュを配置し、
-    // ルートのMeshRendererを非表示にする。
+    // プロジェクタイルGOの見た目を一元管理する。
+    // プール用の素体プリミティブ(球)の MeshRenderer は捕捉して常に無効化し、
+    // カスタムメッシュが読み込めた場合のみ子GOに描画する。
+    // メッシュが無い・読み込み失敗時は何も描画しない。素体の球がそのまま飛ぶ
+    // 「球フォールバック」は禁止仕様であり、ここでは決して素体を再表示しない。
     internal sealed class ProjectileMeshRestorer : MonoBehaviour
     {
-        private Mesh     _originalMesh;
-        private Material _originalMaterial;
-        private bool     _rootModified;
-
+        private MeshRenderer _rootRenderer;
+        private bool _captured;
         private GameObject _childGo;
 
+        // mesh が null の場合は何も描画しない(球フォールバックしない)。
         internal void Apply(Mesh mesh, Material material, Vector3 offset, Quaternion rotation, Vector3 scale)
         {
-            if (mesh == null && material == null) return;
-
-            bool isIdentity = offset == Vector3.zero
-                           && rotation == Quaternion.identity
-                           && (scale == Vector3.one || scale == Vector3.zero);
-
-            if (!isIdentity || _childGo != null)
+            // 初回: 素体(球)の MeshRenderer を捕捉し、以後この弾体では常に無効のまま扱う。
+            if (!_captured)
             {
-                // 子GO アプローチ: ルートMeshRendererを隠して子GOにメッシュを置く
-                if (_childGo == null)
-                {
-                    _childGo = new GameObject("[ACMu]ProjMesh");
-                    _childGo.transform.SetParent(transform, false);
-                    _childGo.AddComponent<MeshFilter>();
-                    _childGo.AddComponent<MeshRenderer>();
-                }
-
-                _childGo.transform.localPosition = offset;
-                _childGo.transform.localRotation = rotation;
-                _childGo.transform.localScale    = (scale == Vector3.zero) ? Vector3.one : scale;
-
-                var cmf = _childGo.GetComponent<MeshFilter>();
-                var cmr = _childGo.GetComponent<MeshRenderer>();
-                if (cmf != null && mesh     != null) cmf.sharedMesh    = mesh;
-                if (cmr != null && material != null) cmr.sharedMaterial = material;
-                _childGo.SetActive(true);
-
-                // ルート MeshRenderer を隠す
-                var rootMr = GetComponent<MeshRenderer>();
-                if (rootMr != null) rootMr.enabled = false;
+                _rootRenderer = GetComponent<MeshRenderer>();
+                _captured = true;
             }
-            else
+            if (_rootRenderer != null) _rootRenderer.enabled = false;
+
+            if (mesh == null)
             {
-                // ルートGO直接変更
-                var mf = GetComponent<MeshFilter>();
-                var mr = GetComponent<MeshRenderer>();
-
-                if (!_rootModified)
-                {
-                    _originalMesh     = mf != null ? mf.sharedMesh    : null;
-                    _originalMaterial = mr != null ? mr.sharedMaterial : null;
-                    _rootModified = true;
-                }
-                if (mf != null && mesh     != null) mf.sharedMesh    = mesh;
-                if (mr != null && material != null) mr.sharedMaterial = material;
+                // カスタムメッシュ無し/読み込み失敗: 何も表示しない。
+                if (_childGo != null) _childGo.SetActive(false);
+                return;
             }
+
+            if (_childGo == null)
+            {
+                _childGo = new GameObject("[ACMu]ProjMesh");
+                _childGo.transform.SetParent(transform, false);
+                _childGo.AddComponent<MeshFilter>();
+                _childGo.AddComponent<MeshRenderer>();
+            }
+
+            _childGo.transform.localPosition = offset;
+            _childGo.transform.localRotation = rotation;
+            _childGo.transform.localScale    = (scale == Vector3.zero) ? Vector3.one : scale;
+
+            var cmf = _childGo.GetComponent<MeshFilter>();
+            var cmr = _childGo.GetComponent<MeshRenderer>();
+            if (cmf != null) cmf.sharedMesh = mesh;
+            if (cmr != null && material != null) cmr.sharedMaterial = material;
+            _childGo.SetActive(true);
         }
 
         void OnDisable()
         {
-            // 子GO を非表示にしてルート MeshRenderer を復元
-            if (_childGo != null)
-            {
-                _childGo.SetActive(false);
-                var rootMr = GetComponent<MeshRenderer>();
-                if (rootMr != null) rootMr.enabled = true;
-            }
-
-            // ルート直接変更の復元
-            if (_rootModified)
-            {
-                var mf = GetComponent<MeshFilter>();
-                var mr = GetComponent<MeshRenderer>();
-                if (mf != null) mf.sharedMesh    = _originalMesh;
-                if (mr != null) mr.sharedMaterial = _originalMaterial;
-                _rootModified = false;
-            }
+            // プール返却時: 子メッシュを隠す。素体の球は決して復元しない(常に無効のまま)。
+            if (_childGo != null) _childGo.SetActive(false);
+            if (_rootRenderer != null) _rootRenderer.enabled = false;
         }
     }
 }

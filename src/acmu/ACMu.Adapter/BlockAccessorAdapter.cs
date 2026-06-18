@@ -15,6 +15,8 @@ namespace ACMu.Adapter
         }
 
         public Guid Guid { get { return _bb.Guid; } }
+        public string BlockName { get { return _bb.Prefab != null ? _bb.Prefab.name : _bb.gameObject.name; } }
+        public int BlockTypeId { get { return _bb.BlockID; } }
         public GameObject GameObject { get { return _bb.gameObject; } }
         public Rigidbody Rigidbody { get { return _bb.Rigidbody; } }
         public bool IsSimulating { get { return _bb.isSimulating; } }
