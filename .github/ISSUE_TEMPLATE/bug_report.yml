@@ -1,7 +1,7 @@
 name: バグ報告
 description: 壊れている挙動、または想定外の挙動を記録します。
 title: "バグ: "
-labels: []
+labels: ["type:bug"]
 body:
   - type: textarea
     id: summary

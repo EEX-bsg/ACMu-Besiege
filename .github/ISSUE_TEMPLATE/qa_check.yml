@@ -1,7 +1,7 @@
 name: QA 確認
 description: Besiege 実機や手動確認の記録用です。
 title: "QA: "
-labels: []
+labels: ["type:qa", "needs:human-test"]
 body:
   - type: textarea
     id: target

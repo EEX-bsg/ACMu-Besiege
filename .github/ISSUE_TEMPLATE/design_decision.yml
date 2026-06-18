@@ -1,7 +1,7 @@
 name: 設計判断
 description: 実装前に判断が必要な項目です。
 title: "設計: "
-labels: []
+labels: ["type:design", "needs:design"]
 body:
   - type: textarea
     id: question

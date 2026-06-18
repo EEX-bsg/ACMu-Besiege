@@ -1,7 +1,7 @@
 name: タスク
 description: 実装、整理、AI への作業引き継ぎ用です。
 title: "タスク: "
-labels: []
+labels: ["type:task"]
 body:
   - type: textarea
     id: goal
