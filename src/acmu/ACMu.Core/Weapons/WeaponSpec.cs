@@ -37,6 +37,8 @@ namespace ACMu.Core.Weapons
 
         public WeaponSpec Clone()
         {
+            // 浅いコピーで安全: 参照型フィールドは string(ProjectileKey)のみ。
+            // string はイミュータブルなのでコピー側と共有しても書き換え競合が起きない。
             return (WeaponSpec)MemberwiseClone();
         }
     }

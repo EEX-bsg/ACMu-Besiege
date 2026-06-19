@@ -30,6 +30,8 @@ namespace ACMu.Core.Weapons
 
         public bool Equals(ProjectileHandle other)
         {
+            // OwnerPlayerId を含めない: クライアントがプロキシを受信する際に owner=0 で再構築するケースがあり、
+            // 同一弾体でも OwnerPlayerId が片側では 0 になることがある。Id のみが弾体の同一性を表す。
             return Id == other.Id;
         }
 
