@@ -101,6 +101,8 @@ namespace ACMu.Weapons
                 return;
             }
 
+            // IProjectileService ではなく具象型 ProjectileService にキャストする。
+            // EnsureTypePool など内部 API は IProjectileService に露出していないため。
             _projectileService = _services.Projectiles as ProjectileService;
             _pipeline = new FirePipeline(this, _weapon, _projectileService, this, _services.Session, _projSync);
 

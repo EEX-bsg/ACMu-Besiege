@@ -69,6 +69,10 @@ namespace ACMu.Compat.Shooting
 
         protected override void OnAttached()
         {
+            // WeaponSpec の既定値(全弾体共通の固定仕様)を確立する唯一の場所。
+            // ここでは Block への接続がまだないためスライダー値は読めない。
+            // OnSimulationStart より先に呼ばれ、BaseSpec.ExplosionRadius 等を
+            // ここで確定させておかないとホスト側(OldCannonHostBehaviour.OnSimulateStart 末尾)が読めない。
             Host.BaseSpec.ProjectileKey             = SharedProjectileKey;
             Host.BaseSpec.MuzzleVelocity            = 250f;
             Host.BaseSpec.FireIntervalSeconds       = 0.37f;
@@ -102,6 +106,9 @@ namespace ACMu.Compat.Shooting
 
         protected override void OnSimulationStart()
         {
+            // OnAttached で固定仕様を書いた後、シミュ開始時点でのみ有効な
+            // スライダー初期値・マガジン初期状態などをキャッシュする。
+            // LoadingModule はホスト側 OnSimulateStart が既にセット済み。
             OldCannonModule m = LoadingModule;
             if (m == null) return;
 
@@ -125,6 +132,9 @@ namespace ACMu.Compat.Shooting
                 foreach (var s in m.Sounds)
                     if (s != null && !string.IsNullOrEmpty(s.Name)) _soundNames.Add(s.Name);
 
+            // HitSounds は OnExplosion(通常着弾爆発) と
+            // OldCannonHostBehaviour.OnFuseExplosion(タイムフューズ爆発) の両パスで再生する。
+            // 両クラスが独立して保持するのはそれぞれの爆発ハンドラが直接参照するため。
             _hitSoundNames.Clear();
             if (m.HitSounds != null)
                 foreach (var s in m.HitSounds)

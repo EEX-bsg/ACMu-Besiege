@@ -91,7 +91,10 @@ namespace ACMu.Weapons
 
             if (context.Shot.ProjectileKey != null && _host.Projectiles != null)
             {
-                // MP クライアントはホスト権威実行のため発射要求を送信
+                // IsSimulating ではなく IsHost で分岐する。
+                // IsSimulating は MP クライアントのローカルシミュでも true になるため、
+                // 「弾体スポーンの最終権威はホスト」を表現するには IsHost が必要。
+                // クライアントはここで発射要求を送り、弾体はホスト→ブロードキャストで受け取る。
                 if (_session != null && _session.IsMultiplayer && !_session.IsHost && _projSync != null)
                 {
                     Vector3 vel = context.Direction * context.Shot.MuzzleVelocity;
