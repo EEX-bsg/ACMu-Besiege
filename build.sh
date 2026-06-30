@@ -12,7 +12,8 @@ if [ -z "$MSBUILD" ]; then
     MSBUILD="/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/MSBuild.exe"
 fi
 
-"$MSBUILD" src/acmu/acmu.csproj /p:Configuration=Release /nologo /v:minimal
+# MSYS_NO_PATHCONV: Git Bash が /p: /nologo 等を Windows パスに変換するのを防ぐ
+MSYS_NO_PATHCONV=1 "$MSBUILD" src/acmu/acmu.csproj /p:Configuration=Release /nologo /v:minimal
 
 if [ -n "${BESIEGE_DIR:-}" ]; then
     DEST="$BESIEGE_DIR/Besiege_Data/Mods/ACMu"
