@@ -70,7 +70,7 @@ ACMu.Host → [Modding.ModEntryPoint]
 
 ## 3. その他
 
-1. **カスタムモジュール実装方式**: BCMの`AddBlockModule`登録は維持しつつ、TBehaviourはACMuが提供する汎用ホスト(WeaponComponentBaseを生成・委譲する薄いBlockModuleBehaviour)に固定する。プラグインはXMLモジュール定義+WeaponComponentBase継承+Register呼び出しの3点のみ書く。旧版互換モジュールはCompat層がこのAPI上で再実装し、新版モジュールも同一APIで実装する。
+1. **カスタムモジュール実装方式**: BCMの`AddBlockModule`登録は維持しつつ、TBehaviourはACMuが提供する汎用ホスト(WeaponComponentBaseを生成・委譲する`WeaponHostBehaviour<TModule>`)を継承した具象クラスに固定する。プラグインはXMLモジュール定義+WeaponComponentBase継承+具象Behaviour宣言+`Register<TModule>`呼び出しを書く。**`AddBlockModule`の実呼び出しは`WeaponRegistration.ModuleRegistrar`デリゲート内に置き、プラグイン自身のアセンブリから呼ぶ**——`AddBlockModule`は`GetCallingAssembly()`で登録Mod名義(セーブXMLの`modid`)を決めるため、ACMuが代理で呼ぶと全武装がACMu名義になりMP不一致検出・セーブ可搬性が壊れる。デリゲート本体の所属アセンブリ=名義、という仕組みでCompat(acmu.dll内→ACMu名義、互換ブロックとして正)と外部プラグイン(自Mod名義)が同一APIで両立する。旧版互換モジュールはCompat層がこのAPI上で再実装し、新版モジュールも同一APIで実装する。
 
 2. **実装方針と進め方**: 縦切り優先。ROADMAP.md の M0→M6 の順で、各マイルストーンごとに「ゲーム内で動く」状態を保つ。契約は凍結扱いとし、変更が必要になったら実装を止めて設計判断を仰ぐ。
 

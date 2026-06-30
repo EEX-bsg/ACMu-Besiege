@@ -6,6 +6,7 @@ using ACMu.Core;
 using ACMu.Net;
 using ACMu.PluginApi;
 using ACMu.Weapons;
+using Modding.Modules;
 using UnityEngine;
 
 namespace ACMu.Host
@@ -108,11 +109,19 @@ namespace ACMu.Host
 
             try
             {
-                registry.Register<OldCannonModule, OldCannonHostBehaviour>(new WeaponRegistration
+                registry.Register<OldCannonModule>(new WeaponRegistration
                 {
                     ModuleName = "AdShootingProp",
                     MultiplayerCompatible = true,
-                    WeaponFactory = () => new OldCannonWeapon()
+                    WeaponFactory = () => new OldCannonWeapon(),
+                    // AddBlockModule 呼び出しはこの acmu.dll 内に焼かれるため AdShootingProp は
+                    // ACMu 名義で登録される。互換ブロックは ACMu が提供する建付けなのでこれが正。
+                    // canReload(第2引数)は旧来 MultiplayerCompatible を誤って流用していた値(true)を
+                    // 明示的に踏襲。両者は別概念であり、適正値はオーナー確認待ち。
+                    ModuleRegistrar = delegate
+                    {
+                        CustomModules.AddBlockModule<OldCannonModule, OldCannonHostBehaviour>("AdShootingProp", true);
+                    }
                 });
                 services.Log.Info("[ACMu] AdShootingProp registered");
             }
@@ -144,11 +153,16 @@ namespace ACMu.Host
 
             try
             {
-                registry.Register<TestCannonModule, TestCannonHostBehaviour>(new WeaponRegistration
+                registry.Register<TestCannonModule>(new WeaponRegistration
                 {
                     ModuleName = "AcmuTestCannon",
                     MultiplayerCompatible = false,
-                    WeaponFactory = () => new TestCannonWeapon()
+                    WeaponFactory = () => new TestCannonWeapon(),
+                    // 名義は ACMu(acmu.dll 内呼び出し)。canReload は旧来の流用値(false)を明示踏襲。
+                    ModuleRegistrar = delegate
+                    {
+                        CustomModules.AddBlockModule<TestCannonModule, TestCannonHostBehaviour>("AcmuTestCannon", false);
+                    }
                 });
                 services.Log.Info("[ACMu] TestCannon registered");
             }

@@ -25,5 +25,12 @@ namespace ACMu.Weapons
         {
             return _registrations.ContainsKey(moduleType);
         }
+
+        // ModuleRegistrar(Besiege 登録)が失敗したときのロールバック用。
+        // factory だけ登録済みで Besiege 未登録という不整合を残さないため Register 側から呼ぶ。
+        internal static void Remove(Type moduleType)
+        {
+            _registrations.Remove(moduleType);
+        }
     }
 }
